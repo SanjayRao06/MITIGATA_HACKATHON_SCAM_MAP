@@ -218,7 +218,7 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 
 ### P7 — Ops: keep it alive and proven (protects every live check)
 - [x] 7.1 **UptimeRobot** monitor → `/health` every 5 min (Render free plan sleeps after ~15 min)
-- [ ] 7.2 Confirm auto-deploy on push is on (Render → Settings)
+- [x] 7.2 Confirm auto-deploy on push is on (Render → Settings) (confirmed 2026-11-01: every push went live in ~1-2 min)
 - [ ] 7.3 Deploy the frontend; check it works on the live https URL from a phone
 - [ ] 7.4 Run `scenarios.py` against the live server once (`--allow-remote-reset`), then reset
 - [x] 7.5 Long licence uploaded on live; `GET /license` valid through judging day
@@ -233,7 +233,7 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 - [ ] 8.6 Pitch (2 min): Ravi's father / Priya story → how it works → trust rules → licence → privacy → how a bank deploys it
 - [ ] 8.7 Demo video ≤ 3 min (report, lookup formats, attack stopped, map/alert, licence expiry + renew)
 - [ ] 8.8 Rehearse the full demo **3 times** on the live server (docs/09)
-- [ ] 8.9 Demo data loader: one command that fills the live server with a lively, realistic set (busy areas, a spike, a new type, a few verified lookups) right after reset, for the map and alerts part of the demo
+- [x] 8.9 Demo data loader: one command that fills the live server with a lively, realistic set (busy areas, a spike, a new type, a few verified lookups) right after reset, for the map and alerts part of the demo (`tools/scenarios.py --seed 7`: Bengaluru scenarios + 10 more cities; on live add `--allow-remote-reset`)
 
 ### P9 — Extras (only after P1–P8 are done)
 - [ ] 9.1 Hindi **voice** reporting via Sarvam (phone side only; optional; never inside trust rules; nothing logged)
