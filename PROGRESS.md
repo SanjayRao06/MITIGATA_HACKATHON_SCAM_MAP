@@ -54,7 +54,7 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 |---|---|---|---|---|---|
 | P0 | Foundation: deploy, normalizer, DB, `/reports`, `/lookup`, `/admin/reset` | row 2, B1 | both | ✅ done & live | — |
 | P1 | Fake reports: scenarios + **trust rules** + 429 rate limit | 20 + 2 | **Avi** | ✅ all trust checks pass (35/42 overall; the 7 left are P3 map/alerts) | — |
-| P2 | **Licence** + 2 licence files | 15 | **Sanjay** | 🟡 code + tests done, 4 steps proven locally | upload long licence to live right after deploy |
+| P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ✅ done locally (code, 27 tests, short → expire → renew with long.json) | live rehearsal still open (2.10, 7.5): upload long licence to live, rehearse with `--live` |
 | P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ✅ 42/42 scenario checks (16/16 random runs) | — |
 | P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ✅ done | — |
 | P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
@@ -178,13 +178,14 @@ tests must still pass with a valid test licence loaded).
 **Judges test:** challenge a number, then lookup shows `challenged: true` and isn't KNOWN_SCAM ([PRD §A.7]).
 
 ### P5 — Privacy + speed audit (protects 15 + 15) · read docs/04
-- [ ] 5.1 Banned-words test over `server/` and `web/` strings: scammer, fraud, criminal, "this person is"
-- [ ] 5.2 DB audit: no raw reporter_id / IP / name / phone / lat-lng columns
-- [ ] 5.3 Log audit: hit every endpoint; logs show only method, path, status, ms
-- [ ] 5.4 Masking check in API **and** UI (1 and 2 reporters hidden, 3 shown)
-- [ ] 5.5 Latency: p95 lookup < 500 ms over 200 calls on the **live** server (`scenarios.py --latency 200`)
-- [ ] 5.6 Grep for hardcoded identifiers outside `data/verified.json`
+- [x] 5.1 Banned-words test over `server/` and `web/` strings: scammer, fraud, criminal, "this person is"
+- [x] 5.2 DB audit: no raw reporter_id / IP / name / phone / lat-lng columns
+- [x] 5.3 Log audit: hit every endpoint; logs show only method, path, status, ms
+- [x] 5.4 Masking check in API **and** UI (1 and 2 reporters hidden, 3 shown)
+- [~] 5.5 Latency: p95 lookup < 500 ms over 200 calls on the **live** server. Run `python tools/latency_check.py --base <live url>` (read-only). Result 2026-11-01 from Avi's laptop: lookup median 237 ms, p95 480-610 ms; `/health` (no DB) is just as slow, so our code adds ~0 ms and the p95 is network jitter to Render Singapore. Still to do: check the server-side ms in Render logs, and try from another network (phone hotspot)
+- [x] 5.6 Grep for hardcoded identifiers outside `data/verified.json`
 **Done when:** every box in docs/04's checklist is ticked.
+_Status 2026-11-01: 5.1-5.4 and 5.6 done locally (`server/tests/test_privacy_audit.py`, 16 tests; 225 tests pass in all). 5.5 local p95 = 17 ms over 200 lookups; the live run (`scenarios.py --latency 200`, needs the team's OK) is still open._
 
 ### P6 — Frontend + Hindi + icons (15 pts + tie-break) · read docs/07 · can start now in parallel
 **Goal:** a judge reports a scam on a phone in < 60 s (target < 30 s), also in Hindi or icons only, no login.
