@@ -29,11 +29,11 @@ missing real scams, (2) a live licence demo that locks/unlocks the server withou
 | `docs/05-license.md` | licence signing, middleware, /license, clock rollback |
 | `docs/06-map-alerts.md` | /map, /alerts, time windows, severity |
 | `docs/07-frontend.md` | any app screen |
-| `docs/08-implementation-plan.md` | deciding what to do next; each step's "done when" + tests |
+| `docs/08-implementation-plan.md` | older step plan, kept for detail only. **The current plan and order are in PROGRESS.md** |
 | `docs/09-demo-script.md` | rehearsing / preparing judging day |
 | `docs/10-working-agreement.md` | **every session**: how to report to the user after each feature or bug fix |
 | `server/app/data/*.json` | areas (25 pincodes + lat/lng), verified identifiers, scam types, channels |
-| `PROGRESS.md` | what is already built and how to test it (update it — see below) |
+| `PROGRESS.md` | **the plan (phases P1–P8 + score map), status board, and done log**: check it first to pick the next phase |
 
 ## Hard rules (never break)
 1. **Privacy** (see docs/04): never store/show/log reporter name, phone, exact location. Area only.
@@ -49,7 +49,7 @@ missing real scams, (2) a live licence demo that locks/unlocks the server withou
    IST `+05:30` in output).
 
 ## How to work (every step)
-1. Look at `docs/08-implementation-plan.md`, pick the next step, read only the docs it lists.
+1. Look at the status board in `PROGRESS.md`, pick the next phase, and read only the docs it lists.
 2. Write code with **plain-English comments** (the team is learning from it):
    - Every file starts with a docstring: what this file is for, in 2–4 simple sentences.
    - Every function has a docstring: what goes in, what comes out, why it exists.
