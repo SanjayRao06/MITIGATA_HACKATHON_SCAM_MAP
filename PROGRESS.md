@@ -54,7 +54,7 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 |---|---|---|---|---|---|
 | P0 | Foundation: deploy, normalizer, DB, `/reports`, `/lookup`, `/admin/reset` | row 2, B1 | both | ✅ done & live | — |
 | P1 | Fake reports: scenarios + **trust rules** + 429 rate limit | 20 + 2 | **Avi** | ✅ all trust checks pass (35/42 overall; the 7 left are P3 map/alerts) | — |
-| P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ✅ done locally (code, 27 tests, short → expire → renew with long.json) | live rehearsal still open (2.10, 7.5): upload long licence to live, rehearse with `--live` |
+| P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ✅ done on live (2026-11-01: 5-min licence locked live with 403, long licence unlocked it with no restart; long valid until 2027-10-31) | watch the website auto-lock once on live; README licence section (P8) |
 | P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ✅ 42/42 scenario checks (16/16 random runs) | — |
 | P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ✅ done | — |
 | P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
@@ -152,7 +152,7 @@ tests must still pass with a valid test licence loaded).
 - [x] 2.7 **Never delete data** on expiry (lock only); reset keeps the licence
 - [x] 2.8 Clock-rollback guard: remember the latest time seen (memory + DB); clock goes back > 2 min ⇒ locked, even after a restart
 - [x] 2.9 Tests: tampered date → 400; valid → 200; expired → 403 (health/license still 200); renew → 200 with data intact; rollback → 403
-- [ ] 2.10 Upload a long licence to the live server; rehearse the 4 steps live (**right after the push deploys, see Done log**)
+- [x] 2.10 Upload a long licence to the live server; rehearse the 4 steps live (**right after the push deploys, see Done log**)
 - [x] 2.11 Prepare **2 licence files** for submission: `licenses/long.json` (Demo Bank, 1 year) + `licenses/short.json` (5 min, **regenerate at demo time**)
 **Done when:** steps 1–4 below work on the live URL.
 **Judges test (live):** ① `GET /license` shows licensee + expiry → ② upload a 5-min licence → ③ after 5 min a lookup fails and the app shows the expired screen → ④ upload a new licence → works again within a minute, old data still there ([PRD §6]).
@@ -221,7 +221,7 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 - [ ] 7.2 Confirm auto-deploy on push is on (Render → Settings)
 - [ ] 7.3 Deploy the frontend; check it works on the live https URL from a phone
 - [ ] 7.4 Run `scenarios.py` against the live server once (`--allow-remote-reset`), then reset
-- [ ] 7.5 Long licence uploaded on live; `GET /license` valid through judging day
+- [x] 7.5 Long licence uploaded on live; `GET /license` valid through judging day
 - [ ] 7.6 Check Neon free compute hours. Keep-alive is off unless `KEEP_DB_AWAKE=1`: set it on Render the day before judging
 
 ### P8 — README, video, pitch, rehearsal (10 pts) · read docs/09
