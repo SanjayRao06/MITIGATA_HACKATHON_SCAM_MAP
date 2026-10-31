@@ -56,7 +56,7 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 | P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ✅ done | — |
 | P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
 | P6 | **Frontend** (all 9 pages) + **Hindi + icons** | 15 | **Avi** | 🟡 built & live; needs a real-phone stopwatch test | test on a phone (EN, HI, icons) |
-| P7 | **Ops**: keep-awake, frontend deploy, live run of all scenarios | protects all | **Sanjay** | ⬜ | UptimeRobot anytime |
+| P7 | **Ops**: keep-awake, frontend deploy, live run of all scenarios | protects all | **Sanjay** | 🟡 UptimeRobot on | 7.2–7.6 |
 | P8 | **README + video + pitch + rehearsal** | 10 | **both** (split below) | ⬜ | grows as we go; finish last |
 | P9 | Extras: Hindi voice (Sarvam), explain panel, lookalike domains, QR | tie-break | whoever is free | ⬜ | only if time |
 Legend: ⬜ not started · 🟡 in progress · ✅ done
@@ -213,7 +213,7 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 **Judges test:** they report on a phone with a stopwatch, then again in Hindi or using only icons (> 2 min or a login before the form = 0).
 
 ### P7 — Ops: keep it alive and proven (protects every live check)
-- [ ] 7.1 **UptimeRobot** monitor → `/health` every 5 min (Render free plan sleeps after ~15 min)
+- [x] 7.1 **UptimeRobot** monitor → `/health` every 5 min (Render free plan sleeps after ~15 min)
 - [ ] 7.2 Confirm auto-deploy on push is on (Render → Settings)
 - [ ] 7.3 Deploy the frontend; check it works on the live https URL from a phone
 - [ ] 7.4 Run `scenarios.py` against the live server once (`--allow-remote-reset`), then reset
