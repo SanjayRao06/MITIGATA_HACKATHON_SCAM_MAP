@@ -14,7 +14,7 @@ import os
 
 from sqlalchemy import (
     Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, MetaData, String, Table, Text,
-    UniqueConstraint, create_engine, text,
+    UniqueConstraint, create_engine, inspect, text,
 )
 
 metadata = MetaData()
@@ -49,6 +49,9 @@ reports = Table(
     Column("note", Text, nullable=True),                 # for similarity checks only; never returned
     Column("has_screenshot", Boolean, nullable=False, default=False),
     Column("amount_lost_inr", Float, nullable=False, default=0),
+    # Set by the trust engine: True for ONE report per independent, trusted source. /map and
+    # /alerts count only these, so fake waves never show up on the map or fire alerts.
+    Column("trusted", Boolean, nullable=False, default=False),
 )
 Index("ix_reports_identifier", reports.c.identifier_id)
 Index("ix_reports_reporter", reports.c.reporter_hash)
@@ -121,8 +124,16 @@ engine = make_engine()
 
 
 def init_db() -> None:
-    """Create any missing tables (safe to run on every start; existing data is untouched)."""
+    """Create any missing tables and columns (safe to run on every start; data is untouched).
+
+    `create_all` only creates whole tables, so a column added later (like reports.trusted)
+    must be added by hand to databases that already exist, e.g. our live Neon database.
+    """
     metadata.create_all(engine)
+    with engine.begin() as conn:
+        existing = {c["name"] for c in inspect(conn).get_columns("reports")}
+        if "trusted" not in existing:
+            conn.execute(text("ALTER TABLE reports ADD COLUMN trusted BOOLEAN NOT NULL DEFAULT FALSE"))
 
 
 def is_postgres() -> bool:

@@ -45,6 +45,8 @@ missing real scams, (2) a live licence demo that locks/unlocks the server withou
    No auth on the 7 test endpoints.
 4. **Licence check runs on every request** (except `/health`, `/license`). Expiry locks, never deletes.
 5. **Private key never in the repo.** `private.key`, `*.pem`, `licenses/*.json` are in `.gitignore`.
+5b. **No AI attribution in git.** Commit messages, trailers, PR texts and pushes never mention Claude or AI
+   (no `Co-Authored-By: Claude`, no "Generated with Claude Code"). Plain description of the change only.
 6. **Time:** all windows use each report's `occurred_at` compared with the server clock (UTC internally,
    IST `+05:30` in output).
 

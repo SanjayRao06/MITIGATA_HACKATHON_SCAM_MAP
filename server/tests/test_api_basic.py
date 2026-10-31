@@ -128,9 +128,27 @@ def test_all_formats_give_the_same_answer():
     assert all(a == answers[0] for a in answers)
 
 
+# Different people describe a scam in their own words. (Identical notes would be treated as one
+# copy-paste source by the trust rules, which is exactly what we want for fakes.)
+REAL_NOTES = [
+    "Man in police uniform on video call said my Aadhaar was linked to a drug parcel",
+    "Mujhe bola arrest warrant hai aur Skype pe aana padega abhi turant",
+    "They kept my father on a video call for three hours and asked for money",
+    "Caller said a CBI case is filed and I must not tell my family about it",
+]
+
+
+def real_report(i: int, **overrides) -> dict:
+    """A report from genuine person i: own id, own network, own words, different area/time."""
+    pins = ["560102", "560034", "560076", "560011"]
+    return report(reporter_id=f"r_real{i}", ip_prefix=f"10.{i}.0", note=REAL_NOTES[i % 4],
+                  pincode=pins[i % 4], occurred_at=ts(2 + i * 5), reported_at=ts(1.5 + i * 5),
+                  **overrides)
+
+
 def test_two_people_suspicious_and_masked():
-    client.post("/reports", json=report(reporter_id="r_1"))
-    client.post("/reports", json=report(reporter_id="r_2"))
+    client.post("/reports", json=real_report(0))
+    client.post("/reports", json=real_report(1))
     body = look("phone", "9876543210").json()
     assert body["verdict"] == "SUSPICIOUS"
     assert body["distinct_reporters"] == 2
@@ -139,7 +157,7 @@ def test_two_people_suspicious_and_masked():
 
 def test_three_people_known_scam_and_unmasked():
     for i in range(3):
-        client.post("/reports", json=report(reporter_id=f"r_{i}", ip_prefix=f"10.0.{i}"))
+        client.post("/reports", json=real_report(i))
     body = look("phone", "9876543210").json()
     assert body["verdict"] == "KNOWN_SCAM"
     assert body["distinct_reporters"] == 3
@@ -147,11 +165,14 @@ def test_three_people_known_scam_and_unmasked():
     assert body["first_seen"].endswith("+05:30")
 
 
-def test_one_person_six_times_is_one_person():
-    for i in range(6):
-        client.post("/reports", json=report(report_id=f"rep_s{i}", reporter_id="r_spam"))
+def test_one_person_six_times_is_one_person_and_rate_limited():
+    # 6 reports inside one hour from the same reporter: 3 stored, then 429 ([PRD §A.0] rule 4).
+    codes = [client.post("/reports", json=report(report_id=f"rep_s{i}", reporter_id="r_spam",
+                                                 occurred_at=ts(1 - i * 0.1), reported_at=ts(0.9 - i * 0.1))
+                         ).status_code for i in range(6)]
+    assert codes == [201, 201, 201, 429, 429, 429]
     body = look("phone", "9876543210").json()
-    assert body["report_count"] == 6
+    assert body["report_count"] == 3
     assert body["distinct_reporters"] == 1
     assert body["verdict"] != "KNOWN_SCAM"
 
@@ -183,7 +204,7 @@ def test_evidence_never_leaks_reporter_ip_or_note():
 
 def test_wording_never_accuses():
     for i in range(3):
-        client.post("/reports", json=report(reporter_id=f"r_{i}", ip_prefix=f"10.0.{i}"))
+        client.post("/reports", json=real_report(i))
     msg = look("phone", "9876543210").json()["message"].lower()
     assert "reported" in msg
     for word in ["scammer", "fraud", "criminal"]:

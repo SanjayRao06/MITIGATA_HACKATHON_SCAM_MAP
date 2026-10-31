@@ -3,11 +3,13 @@
 Run it with `uvicorn app.main:app --reload --no-access-log` from the `server/` folder.
 Endpoints so far (contract in docs/01, source of truth [PRD §A]):
   GET /health, POST /reports, GET /lookup, POST /admin/reset
+  GET /debug/explain (only when the EXPLAIN_ENABLED env var is "1"; shows the trust rules' working)
 Later steps add /map, /alerts, /challenges and /license (see docs/08-implementation-plan.md).
 """
 
 import asyncio
 import contextlib
+import os
 
 from fastapi import Body, FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
@@ -16,10 +18,10 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import delete
 
 from app import db, reference
-from app.lookup import lookup
+from app.lookup import explain, lookup
 from app.normalize import IDENTIFIER_TYPES, InvalidIdentifier, normalize
 from app.privacy import log, safe_logging_middleware, setup_logging
-from app.reports import ReportError, save_report, validate_report
+from app.reports import RateLimited, ReportError, save_report, validate_report
 
 # 1) Logging first, so even startup problems are logged safely.
 setup_logging()
@@ -117,7 +119,11 @@ async def post_report(body: dict = Body(..., openapi_examples={
         return bad_request(str(exc))
 
     # 2) Save it. The database work runs in a worker thread so the server stays responsive.
-    return await run_in_threadpool(save_report, clean)
+    #    Too many reports from one reporter in a short time -> 429 (allowed, [PRD §A.0] rule 4).
+    try:
+        return await run_in_threadpool(save_report, clean)
+    except RateLimited:
+        return JSONResponse(status_code=429, content={"error": "RATE_LIMITED"})
 
 
 @app.get("/lookup")
@@ -141,6 +147,26 @@ def get_lookup(type: str | None = None, value: str | None = None):  # noqa: A002
         return bad_request("invalid value")
 
     return lookup(type, normalized)
+
+
+# The explain endpoint is for demos and debugging. It only shows counts and scores (no ids, no
+# notes), but it is still switched off unless EXPLAIN_ENABLED=1 is set on the server.
+EXPLAIN_ENABLED = os.environ.get("EXPLAIN_ENABLED") == "1"
+
+
+@app.get("/debug/explain", include_in_schema=EXPLAIN_ENABLED)
+def debug_explain(type: str | None = None, value: str | None = None):  # noqa: A002
+    """Why did /lookup give this verdict? Shows each trust layer's effect for one identifier."""
+    if not EXPLAIN_ENABLED:
+        return JSONResponse(status_code=404, content={"error": "not found"})
+    type = (type or "").strip().lower()
+    if type not in IDENTIFIER_TYPES or not value:
+        return bad_request("type and value are required")
+    try:
+        normalized = normalize(type, value)
+    except InvalidIdentifier:
+        return bad_request("invalid value")
+    return explain(type, normalized)
 
 
 @app.post("/admin/reset")
@@ -178,6 +204,13 @@ def _openapi_with_real_status_codes():
             responses = op.get("responses", {})
             if responses.pop("422", None) is not None:
                 responses["400"] = error_400
+    # POST /reports can also answer 429 when one reporter sends too many ([PRD §A.0] rule 4).
+    reports_op = schema.get("paths", {}).get("/reports", {}).get("post")
+    if reports_op:
+        reports_op["responses"]["429"] = {
+            "description": "Too many reports from this reporter in a short time (not stored)",
+            "content": {"application/json": {"example": {"error": "RATE_LIMITED"}}},
+        }
     schema.get("components", {}).get("schemas", {}).pop("HTTPValidationError", None)
     schema.get("components", {}).get("schemas", {}).pop("ValidationError", None)
     app.openapi_schema = schema

@@ -50,9 +50,9 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 | Phase | Feature | Points | Owner | Status | Next action |
 |---|---|---|---|---|---|
 | P0 | Foundation: deploy, normalizer, DB, `/reports`, `/lookup`, `/admin/reset` | row 2, B1 | both | ✅ done & live | — |
-| P1 | Fake reports: scenarios + **trust rules** + 429 rate limit | 20 + 2 | **Avi** | 🟡 scenarios ✅ (Sanjay); trust rules in progress | Build `trust.py` |
+| P1 | Fake reports: scenarios + **trust rules** + 429 rate limit | 20 + 2 | **Avi** | ✅ all trust checks pass (35/42 overall; the 7 left are P3 map/alerts) | — |
 | P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ⬜ | start now |
-| P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ⬜ | after P1 |
+| P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ⬜ | next |
 | P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ⬜ | after P3 |
 | P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
 | P6 | **Frontend** (Report, Lookup, Map heatmap, Expired screen) + **Hindi + icons** | 15 | **Sanjay** | ⬜ | start after P2 (or in parallel) |
@@ -89,7 +89,7 @@ tests must still pass with a valid test licence loaded).
 ## 3. Score map ([PRD §8])
 | Row | What they check | Pts | Checked by | Our phase | Status |
 |---|---|---|---|---|---|
-| 1 | Stops fake reports: bakery ×40, 22 accounts on one Wi-Fi, 1 person ×6, junk → none become "Known scam" | 20 | Test tool | P1 | junk ✅, 1 person ✅, Wi-Fi ❌, bakery ❌ |
+| 1 | Stops fake reports: bakery ×40, 22 accounts on one Wi-Fi, 1 person ×6, junk → none become "Known scam" | 20 | Test tool | P1 | ✅ all four stopped (15/15 random runs) |
 | 2 | Lookup right answer; all formats match; < 0.5 s | 15 | Test tool | P0 ✅, P1, P5 | ✅ |
 | 3 | Map + alerts: spike → alert, normal → none, new type → alert, month-old not on map | 10 | Test tool | P3 | ❌ |
 | 4 | Privacy: < 3 reporters hidden, map never shows a person's location, careful wording. **Reporter identifiable = disqualified** | 15 | Test tool + judge | P0 ✅, P5, P6 | backend ✅ |
@@ -123,18 +123,18 @@ tests must still pass with a valid test licence loaded).
 ### P1 — Fake reports: trust rules (20 pts + 2 bonus) · read docs/03
 **Goal:** none of the 4 tricks makes a number KNOWN_SCAM, and real campaigns still do.
 - [x] 1.1 Scenario runner `tools/scenarios.py` (42 checks; today 29 PASS)
-- [ ] 1.2 `trust.py` skeleton: one function `assess(reports) -> {effective, distinct_reporters, verdict inputs, trusted ids, explain}`; constants at the top (tunable)
-- [ ] 1.3 **L1 same person:** group by reporter hash; each counts once per number
-- [ ] 1.4 **Rate limit → 429:** > 3 reports per reporter per hour, > 20 per day, **timed by the report's own `reported_at`/`occurred_at`**, not arrival time
-- [ ] 1.5 **L2 same network:** same `ip_prefix` hash + same number + within 24 h → 1 effective person
-- [ ] 1.6 **L3 notes:** normalize text; near-duplicate notes (3-word shingles, Jaccard ≥ 0.8) merge into one source; empty ×1.0, generic short ("scam") ×0.8, personal ≥ 8 words ×1.2
-- [ ] 1.7 **L4 coordination score** (last 48 h): burst, newness, low network/area/text diversity, no loss + no screenshot → ≥ 0.6 ⇒ new accounts ×0.2 and KNOWN_SCAM blocked
-- [ ] 1.8 **L5 reputation:** new 0.6 → proven up to 1.0; reporters of verified/disputed numbers 0.3
-- [ ] 1.9 **Verdict:** KNOWN_SCAM needs effective ≥ 3.0 AND ≥ 3 distinct networks AND coordination < 0.6 AND not challenged; `distinct_reporters` = people after trust rules (drives masking)
-- [ ] 1.10 Store a per-report **`trusted`** flag (feeds P3 map/alerts)
-- [ ] 1.11 Fix: duplicate `report_id` counts as a retry only if reporter + identifier also match
-- [ ] 1.12 `GET /debug/explain?type=&value=` (behind an env flag; hashed data only) for the demo
-- [ ] 1.13 Unit tests per layer + full scenario run; then deploy and re-check on live
+- [x] 1.2 `trust.py` skeleton: one function `assess(reports) -> {effective, distinct_reporters, verdict inputs, trusted ids, explain}`; constants at the top (tunable)
+- [x] 1.3 **L1 same person:** group by reporter hash; each counts once per number
+- [x] 1.4 **Rate limit → 429:** > 3 reports per reporter per hour, > 20 per day, **timed by the report's own `reported_at`/`occurred_at`**, not arrival time
+- [x] 1.5 **L2 same network:** same `ip_prefix` hash + same number + within 24 h → 1 effective person
+- [x] 1.6 **L3 notes:** normalize text; near-duplicate notes (3-word shingles, Jaccard ≥ 0.8) merge into one source; empty ×1.0, generic short ("scam") ×0.8, personal ≥ 8 words ×1.2
+- [x] 1.7 **L4 coordination score** (last 48 h): burst, newness, low network/area/text diversity, no loss + no screenshot → ≥ 0.6 ⇒ new accounts ×0.2 and KNOWN_SCAM blocked
+- [x] 1.8 **L5 reputation:** new 0.6 → proven up to 1.0; reporters of verified/disputed numbers 0.3
+- [x] 1.9 **Verdict:** KNOWN_SCAM needs effective ≥ 3.0 AND ≥ 3 distinct networks AND coordination < 0.6 AND not challenged; `distinct_reporters` = people after trust rules (drives masking)
+- [x] 1.10 Store a per-report **`trusted`** flag (feeds P3 map/alerts)
+- [x] 1.11 Fix: duplicate `report_id` counts as a retry only if reporter + identifier also match
+- [x] 1.12 `GET /debug/explain?type=&value=` (behind an env flag; hashed data only) for the demo
+- [x] 1.13 Unit tests per layer + full scenario run; then deploy and re-check on live
 **Done when:** all trust rows in `scenarios.py` PASS **and** every real-campaign row stays PASS.
 **Judges test:** load the 4 tricks from [PRD §4] into the live server, then look up the targets: none may be KNOWN_SCAM.
 
@@ -322,6 +322,63 @@ what stops editing the licence date · what if the clock is set back · how is l
 
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
+
+### P1 — Trust rules + rate limit — 2026-10-31
+**What was built (simple terms):**
+- The server now counts **independent people**, not reports. Five layers decide how much each report counts:
+  - **L1** one reporter = one person
+  - **L2** same Wi-Fi (`ip_prefix`) on the same number within 24 h = one source
+  - **L3** copy-paste notes = one source (personal story ×1.2, empty ×1.0, "scam" ×0.9, copy-paste ×0.8)
+  - **L4** coordination score from 6 warning signs (burst, all new accounts, few networks, one area,
+    empty/duplicate notes, nobody lost money). A score ≥ 0.6 means brand-new accounts count ×0.2 and KNOWN_SCAM is blocked
+  - **L5** reputation (new 0.6, track record 0.8 / 1.0, reported a verified business 0.3)
+- **KNOWN_SCAM** now needs ≥ 3 trusted sources (weight ≥ 0.5) from ≥ 3 networks, no coordination, no dispute.
+  `distinct_reporters` = trusted sources, and that number also decides masking.
+- **429 rate limit:** more than 3 reports in an hour or 20 in a day from one reporter, measured with the
+  reports' own times (the test tool replays weeks in seconds). 429 reports are not stored.
+- Each report gets a `trusted` flag (one per trusted source). P3's map and alerts will count only these,
+  so fakes never move the map or fire alerts.
+- Duplicate `report_id`: a retry only if the reporter and the number also match; otherwise it's stored as a new report.
+- `GET /debug/explain?type=&value=` shows each layer's effect as counts and scores only. It's off unless
+  the server has `EXPLAIN_ENABLED=1`.
+
+**Files touched:**
+- `server/app/trust.py` (new): all trust rules as pure functions + rate-limit check; constants at the top
+- `server/app/assessment.py` (new): loads one identifier's reports + reporter history, runs the rules, stores `trusted` flags
+- `server/app/reports.py`: 429, stricter retry check, flags reporters of verified numbers, refreshes trust after each report
+- `server/app/lookup.py`: verdict/masking from the trust rules; `explain()`
+- `server/app/main.py`: 429 reply, `/debug/explain`, 429 listed on the docs page
+- `server/app/db.py`: `reports.trusted` column + automatic upgrade for existing databases (Neon)
+- `server/tests/test_trust.py` (new, 18 tests); `server/tests/test_api_basic.py` updated (genuine notes, 429)
+
+**How to test it (PowerShell):**
+```powershell
+cd "C:\Users\Avi Verma\Documents\Code\Scam_Map\server"
+.venv\Scripts\python -m pytest -q                       # expected: 135 passed
+$env:DATABASE_URL = "sqlite:///./scenarios.db"; $env:EXPLAIN_ENABLED = "1"
+.venv\Scripts\python -m uvicorn app.main:app --port 8000 --no-access-log
+```
+In a 2nd window, from the repo root:
+```powershell
+server\.venv\Scripts\python tools\scenarios.py --base http://localhost:8000
+# expected: 35/42 checks passed; every FAIL is a /map or /alerts row (P3)
+```
+**By hand in `/docs`:**
+- Send the spammer body from `tools/samples/demo_examples.txt` 4+ times with times inside the same hour
+  (change `report_id` each time). The 4th gets **429**.
+- Send 3 reports with the **same note** from 3 reporter_ids and it stays SUSPICIOUS (copy-paste = one source).
+  With different notes, networks and areas it becomes KNOWN_SCAM.
+- Open `/debug/explain?type=phone&value=...` to see why.
+
+**What to look for:**
+- Scenario rows: spammer 429 + distinct 1, Wi-Fi farm distinct 1, bakery masked, real campaigns KNOWN_SCAM.
+- Ran 15 random seeds: 0 trust failures.
+
+**Known gaps / next:**
+- Thresholds are first guesses tuned on our scenarios. Re-check them if the organisers' sample logs look different.
+- Not yet run against the live server's database (scenarios wipe data, so only with `--allow-remote-reset`
+  when the team agrees).
+- Next: P3 map + alerts (count only `trusted` reports).
 
 ### Step 3 — Test harness / scenario runner — 2026-10-31
 **What was built (simple terms):**

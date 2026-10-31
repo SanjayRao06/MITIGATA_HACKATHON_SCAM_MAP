@@ -1,17 +1,19 @@
 """POST /reports logic: check a report, then save it.
 
 validate_report() turns the raw JSON into a clean dict or raises ReportError (-> HTTP 400).
-save_report() stores it and returns the reply {report_id, case_id, merged}.
+save_report() applies the rate limit (429), stores it, re-runs the trust rules for that
+identifier, and returns the reply {report_id, case_id, merged}.
 Rules come from [PRD §A.2] and docs/02 ("Other validation").
 """
 
 import uuid
 from datetime import timedelta
 
-from sqlalchemy import func, insert, select
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 
-from app import reference
+from app import reference, trust
+from app.assessment import refresh_trusted_flags
 from app.db import engine, identifiers, reporters, reports
 from app.normalize import IDENTIFIER_TYPES, InvalidIdentifier, normalize
 from app.privacy import hash_value
@@ -135,55 +137,92 @@ def _get_or_create_identifier(conn, id_type: str, value: str) -> int:
         return conn.execute(query).scalar_one()
 
 
+class RateLimited(Exception):
+    """This reporter sent too many reports in a short time. The API answers 429 ([PRD §A.0] rule 4)."""
+
+
+def _check_rate_limit(conn, clean: dict) -> None:
+    """Raise RateLimited if this reporter is over 3 reports/hour or 20/day.
+
+    Uses the reports' OWN times (reported_at, else occurred_at), not arrival time, because the
+    test tool replays weeks of reports in a few seconds (see trust.over_rate_limit).
+    """
+    new_time = clean["reported_at"] or clean["occurred_at"]
+    window = max(w for w, _ in trust.RATE_LIMITS)
+    rows = conn.execute(select(reports.c.reported_at, reports.c.occurred_at).where(
+        reports.c.reporter_hash == clean["reporter_hash"])).all()
+    times = [r.reported_at or r.occurred_at for r in rows]
+    times = [t for t in times if abs(t - new_time) <= window]
+    if trust.over_rate_limit(new_time, times):
+        raise RateLimited()
+
+
 def save_report(clean: dict) -> dict:
     """Store a validated report.
 
     In: output of validate_report(). Out: {"report_id", "case_id", "merged"} for the 201 reply.
+    Raises RateLimited (-> 429) if the reporter is sending too many.
     `merged` is true when this identifier already had at least one report.
-    If the same report_id arrives twice (a client retrying), we don't store it again; we just
-    return the original answer, so retries can't inflate counts.
+    The same report_id sent again by the same reporter about the same identifier is a retry: we
+    don't store it again, we just repeat the first answer, so retries can't inflate counts.
     """
     with engine.begin() as conn:  # one transaction: all of this happens, or none of it
-        # 1) Same report_id seen before? Return the earlier result instead of double-counting.
-        existing = conn.execute(
-            select(reports.c.identifier_id).where(reports.c.report_id == clean["report_id"])
-        ).first()
-        if existing:
-            return {"report_id": clean["report_id"], "case_id": f"case_{existing.identifier_id}",
-                    "merged": True}
-
-        # 2) Find or create the identifier row. Its id is the case_id.
+        # 1) Find or create the identifier row. Its id is the case_id.
         ident_id = _get_or_create_identifier(conn, clean["identifier_type"], clean["identifier_value"])
 
-        # 3) Was there already a report about it? That's what "merged" means.
+        # 2) Same report_id seen before? If it's the same reporter + identifier, it's a retry.
+        #    If it's a DIFFERENT report that happens to reuse the id, store it under a new
+        #    internal id (the reply still echoes the id the client sent).
+        stored_id = clean["report_id"]
+        existing = conn.execute(select(reports.c.identifier_id, reports.c.reporter_hash)
+                                .where(reports.c.report_id == stored_id)).first()
+        if existing:
+            if existing.identifier_id == ident_id and existing.reporter_hash == clean["reporter_hash"]:
+                return {"report_id": clean["report_id"], "case_id": f"case_{ident_id}", "merged": True}
+            stored_id = f"{stored_id}#{uuid.uuid4().hex[:8]}"
+
+        # 3) Too many reports from this person in a short time? -> 429, nothing stored.
+        _check_rate_limit(conn, clean)
+
+        # 4) Was there already a report about this identifier? That's what "merged" means.
         before = conn.execute(
             select(func.count()).select_from(reports).where(reports.c.identifier_id == ident_id)
         ).scalar_one()
 
-        # 4) Remember the (hashed) reporter for reputation later (Step 4).
-        if conn.execute(select(reporters.c.reporter_hash)
-                        .where(reporters.c.reporter_hash == clean["reporter_hash"])).first() is None:
+        # 5) Remember the (hashed) reporter. Anyone reporting a VERIFIED business gets their
+        #    reputation lowered (trust rule L5): honest people rarely report a bank's real number.
+        verified = reference.get_verified(clean["identifier_type"], clean["identifier_value"]) is not None
+        known = conn.execute(select(reporters.c.reporter_hash)
+                             .where(reporters.c.reporter_hash == clean["reporter_hash"])).first()
+        if known is None:
             try:
                 with conn.begin_nested():
                     conn.execute(insert(reporters).values(
-                        reporter_hash=clean["reporter_hash"], first_seen=now_utc(), reputation=0.6))
+                        reporter_hash=clean["reporter_hash"], first_seen=now_utc(),
+                        reputation=trust.REP_FLAGGED if verified else trust.REP_NEW))
             except IntegrityError:
                 pass  # another request created it at the same moment; that's fine
+        elif verified:
+            conn.execute(update(reporters).where(reporters.c.reporter_hash == clean["reporter_hash"])
+                         .values(reputation=trust.REP_FLAGGED))
 
-        # 5) Store the report itself.
+        # 6) Store the report itself.
         try:
             with conn.begin_nested():
                 conn.execute(insert(reports).values(
-                    report_id=clean["report_id"], identifier_id=ident_id,
+                    report_id=stored_id, identifier_id=ident_id,
                     occurred_at=clean["occurred_at"], reported_at=clean["reported_at"],
                     received_at=now_utc(), reporter_hash=clean["reporter_hash"],
                     ip_hash=clean["ip_hash"], channel=clean["channel"], scam_type=clean["scam_type"],
                     pincode=clean["pincode"], locality=clean["locality"], city=clean["city"],
                     note=clean["note"], has_screenshot=clean["has_screenshot"],
-                    amount_lost_inr=clean["amount_lost_inr"],
+                    amount_lost_inr=clean["amount_lost_inr"], trusted=False,
                 ))
         except IntegrityError:
             # The same report_id was inserted by a parallel retry a moment ago.
-            pass
+            return {"report_id": clean["report_id"], "case_id": f"case_{ident_id}", "merged": True}
+
+        # 7) Re-run the trust rules for this identifier and store which reports count.
+        refresh_trusted_flags(conn, ident_id, verified)
 
     return {"report_id": clean["report_id"], "case_id": f"case_{ident_id}", "merged": before > 0}
