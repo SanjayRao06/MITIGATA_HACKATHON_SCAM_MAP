@@ -1,0 +1,19 @@
+{
+  "channels": ["Phone call", "SMS or WhatsApp", "QR code", "Fake website", "UPI request", "Something else"],
+  "scam_types": {
+    "digital-arrest": "Digital arrest video call: fake police say you are under arrest",
+    "fake-kyc-link": "Fake KYC update link that copies a bank's page",
+    "upi-refund-qr": "UPI refund QR scam: 'scan to receive' actually sends money",
+    "investment-group": "WhatsApp investment group with fake profits",
+    "courier-customs": "Parcel held at customs, 'pay a fine'",
+    "job-offer": "Work-from-home task job that asks for deposits",
+    "lottery-prize": "Lottery or prize win that needs a fee",
+    "loan-app-harassment": "Instant loan app that threatens your contacts",
+    "electricity-disconnection": "'Power cut tonight' SMS",
+    "fake-customer-care": "Fake customer care number from a search result",
+    "otp-call": "OTP or card verification call",
+    "sextortion": "Video call extortion"
+  },
+  "unknown_scam_type_maps_to": "other",
+  "_note": "Safety-advice text per type (EN/HI) lives in the frontend i18n files; police never arrest over video call, banks never ask for OTP, receiving money never needs a PIN/QR scan."
+}

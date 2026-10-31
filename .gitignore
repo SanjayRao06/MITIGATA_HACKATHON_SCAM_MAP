@@ -1,0 +1,15 @@
+# secrets — NEVER commit
+private.key
+*.pem
+.env
+licenses/
+# local data
+dev.db
+*.sqlite
+logs_raw/
+# python / node
+__pycache__/
+.venv/
+.pytest_cache/
+node_modules/
+dist/

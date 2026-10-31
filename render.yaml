@@ -1,0 +1,31 @@
+# Render "blueprint": one always-on web service + one managed Postgres database.
+# Deploy: push the repo to GitHub, then in Render choose New > Blueprint and pick this repo.
+# Why "starter" plan: the free plan sleeps after inactivity (cold starts would break the
+# judges' test tool), so the web service must be on a paid always-on plan.
+services:
+  - type: web
+    name: scam-map
+    runtime: python
+    plan: starter
+    # Singapore is Render's closest region to India: lookups must answer in < 500 ms
+    # (PRD §3/§8) and a US region adds ~250 ms of network round-trip on its own.
+    region: singapore
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    # --no-access-log: uvicorn's access log prints client IPs and query strings (privacy rule).
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log --proxy-headers
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: scam-map-db
+          property: connectionString
+      - key: HASH_SECRET          # used from Step 2 to HMAC reporter ids / IP prefixes
+        generateValue: true
+
+databases:
+  - name: scam-map-db
+    plan: basic-256mb
+    region: singapore   # same region as the web service, so DB calls stay fast
