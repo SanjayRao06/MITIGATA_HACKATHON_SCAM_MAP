@@ -7,9 +7,9 @@ a one-line explanation. Newest entry at the top.
 ## Status board
 | Step | Name | Status |
 |---|---|---|
-| 0 | Skeleton + deploy | 🟡 (local done; cloud deploy pending) |
+| 0 | Skeleton + deploy | ✅ https://mitigata-hackathon-scam-map.onrender.com |
 | 1 | Reference data + normalizer | ✅ |
-| 2 | DB + reports + naive lookup + reset | ⬜ |
+| 2 | DB + reports + naive lookup + reset | ✅ (local + Neon tested; live after push) |
 | 3 | Test harness / scenarios | ⬜ |
 | 4 | Trust engine | ⬜ |
 | 5 | Licence | ⬜ |
@@ -51,6 +51,65 @@ curl -s -X POST localhost:8000/reports -H 'content-type: application/json' -d '{
 
 ---
 <!-- entries go below, newest first -->
+
+### Step 2 — Database + reports + naive lookup + reset — 2026-10-31
+**What was built (simple terms):**
+- A database with tables for reports, identifiers (one row per number/UPI/link/sender; its id is
+  the `case_id`), reporters, challenges, licence and clock guard. The laptop uses SQLite (`server/dev.db`),
+  Render uses Neon Postgres, with the same code.
+- `POST /reports` checks a report (bad identifier / unknown pincode / bad time / missing reporter → 400),
+  saves it, and replies `201 {report_id, case_id, merged}`. Sending the same `report_id` twice doesn't double-count.
+- `GET /lookup` normalizes the value (so all formats match) and answers with one of the 4 verdicts.
+  It counts distinct people, hides the value until 3+ people report it, and lists evidence (time,
+  channel, type, area only), plus a careful `message` like "Reported by 3 people - be careful".
+- `POST /admin/reset` deletes all reports (plus identifiers, reporters, challenges). The licence is kept.
+- Privacy: reporter id and IP prefix are stored only as HMAC hashes, and notes are never returned.
+  Neon is pinged every 4 minutes so its free tier doesn't fall asleep (waking up would exceed 0.5 s).
+
+**Files touched:**
+- `server/app/db.py` — tables + engine; SQLite locally, `DATABASE_URL` (Neon) on Render
+- `server/app/timeutil.py` — parse times → UTC for storage, print as IST `+05:30`
+- `server/app/privacy.py` — added `hash_value()` (HMAC) and `mask()` (PRD formats)
+- `server/app/reports.py` — `validate_report()` (400 rules) + `save_report()` (store, case_id, merged)
+- `server/app/lookup.py` — `lookup()` verdict/masking/evidence; `count_people()` is the part Step 4 replaces
+- `server/app/main.py` — routes `/reports`, `/lookup`, `/admin/reset`; 422→400; DB keep-alive
+- `server/tests/conftest.py` — tests use a throwaway SQLite file (never dev.db or Neon)
+- `server/tests/test_api_basic.py` — 34 end-to-end tests
+
+**How to test it (PowerShell):**
+```powershell
+cd "C:\Users\Avi Verma\Documents\Code\Scam_Map\server"
+.venv\Scripts\python -m pytest -q          # expected: 110 passed
+.venv\Scripts\python -m uvicorn app.main:app --reload --no-access-log
+```
+In a 2nd PowerShell window:
+```powershell
+$u = "http://localhost:8000"     # or https://mitigata-hackathon-scam-map.onrender.com
+$t = (Get-Date).AddHours(-1).ToString("yyyy-MM-ddTHH:mm:ss+05:30")
+foreach ($i in 1..3) {
+  $b = @{report_id="demo_$i"; occurred_at=$t; reporter_id="r_$i"; ip_prefix="10.0.$i"; channel="Phone call";
+         scam_type="digital-arrest"; identifier_type="phone"; identifier_value="+91 98765 43210"; pincode="560102"} | ConvertTo-Json
+  Invoke-RestMethod -Method Post "$u/reports" -ContentType "application/json" -Body $b
+}
+Invoke-RestMethod "$u/lookup?type=phone&value=09876543210"          # KNOWN_SCAM, +919876543210
+Invoke-RestMethod "$u/lookup?type=phone&value=1800%201600"          # VERIFIED_BUSINESS
+Invoke-RestMethod "$u/lookup?type=phone&value=12345"                # error 400
+Invoke-RestMethod -Method Post "$u/admin/reset"                     # ok, deleted_reports 3
+```
+Or open `http://localhost:8000/docs` for clickable forms for every endpoint.
+
+**What to look for:**
+- After 1–2 reporters: `SUSPICIOUS`, `display_value` = `98XXXXX210`. After 3: `KNOWN_SCAM`, full number.
+- `1800 1600`, `VM-HDFCBK` etc. stay `VERIFIED_BUSINESS` even if people report them.
+- Server log lines show only method/path/status/ms (no numbers, no IPs).
+
+**Known gaps / next:**
+- **Counting is naive on purpose:** 3 different `reporter_id`s = KNOWN_SCAM, so 22 fake accounts on
+  one Wi-Fi WILL still fool it. Steps 3 (scenario script) and 4 (trust engine) fix this.
+- No rate limit (429) yet (Step 4). No `/challenges` endpoint yet (Step 7), but the table exists.
+- Lookups count reports live (2 indexed queries) instead of keeping a running total. This is always correct
+  under parallel reports; we can add a cached summary later if lookups get slow.
+- Local runs deliberately ignore `.env.local`'s DATABASE_URL so laptop tests never touch the live DB.
 
 ### Step 1 — Reference data + normalizer — 2026-10-31
 **What was built (simple terms):**
@@ -109,7 +168,7 @@ cd server
 
 ---
 
-### Step 0 — Skeleton + deploy — 2026-10-31 (local ✅, cloud deploy ⬜)
+### Step 0 — Skeleton + deploy — 2026-10-31 ✅ live at https://mitigata-hackathon-scam-map.onrender.com
 **What was built (simple terms):**
 - A FastAPI server with one endpoint, `GET /health` → `{"ok": true}`, which deploy platforms and judges use to check we're alive.
 - A privacy-safe request logger that writes one line per request: method, path, status, milliseconds.
@@ -143,7 +202,7 @@ curl -s "localhost:8000/health?value=9876543210"
 ```
 
 **Known gaps / next:**
-- **Cloud deploy is not done yet.** It needs a GitHub repo plus a Render account, and this folder isn't a git repo yet.
+- **Deployed 2026-10-31** on Render (free plan, Singapore, repo owned by a teammate). Check: `curl https://mitigata-hackathon-scam-map.onrender.com/health` → `{"ok":true}`. The root `/` returns 404 until the frontend is added (Step 8).
   Render's Blueprint flow asked us for card details, so we create the service by hand instead (no card):
   Render → **New → Web Service** → pick the repo → Region **Singapore** → Root Directory `server` →
   Build `pip install -r requirements.txt` →
@@ -154,7 +213,7 @@ curl -s "localhost:8000/health?value=9876543210"
   org Avi, region Singapore, branch `main`. The folder is linked via `.neon`, and the connection
   strings are in `.env.local`. Both files are git-ignored. For Render's `DATABASE_URL`, paste the
   **pooled** `DATABASE_URL` value from `.env.local`, not the `_UNPOOLED` one.
-  Note: the server doesn't read `.env.local` yet; Step 2 adds that. Then check `https://<service>.onrender.com/health` from a phone.
+  Note: on purpose, the server never reads `.env.local` (laptop = SQLite, Render = Neon via its env var). Then check `https://<service>.onrender.com/health` from a phone.
 - **Free plan only (team decision).** The free web service sleeps after ~15 min idle, and the first
   request after that takes 30–60 s. Fix: set up a free pinger (UptimeRobot or cron-job.org) to
   `GET /health` every 5–10 min, and open `/health` yourself just before judging. The disk is wiped

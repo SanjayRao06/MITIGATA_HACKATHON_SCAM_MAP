@@ -3,7 +3,7 @@
 Read this file first, every session. It tells you what we are building, the rules you must
 never break, and how to work. Topic details live in `docs/` — open only the one you need.
 
-## What we are building (one paragraph)
+## What we are building (one paragraph
 A server + mobile website where people report scam phone numbers, UPI IDs, links and SMS
 senders, and look one up before trusting it. A judges' test tool hits our 7 API endpoints
 with secret data full of fake reports. We win on: (1) trust rules that stop fakes without
