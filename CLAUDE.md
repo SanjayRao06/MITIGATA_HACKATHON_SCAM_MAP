@@ -33,7 +33,7 @@ missing real scams, (2) a live licence demo that locks/unlocks the server withou
 | `docs/09-demo-script.md` | rehearsing / preparing judging day |
 | `docs/10-working-agreement.md` | **every session**: how to report to the user after each feature or bug fix |
 | `server/app/data/*.json` | areas (25 pincodes + lat/lng), verified identifiers, scam types, channels |
-| `PROGRESS.md` | **the plan (phases P1–P8 + score map), status board, and done log**: check it first to pick the next phase |
+| `PROGRESS.md` | **the plan (phases P0–P9, step-by-step checklists, score map), status board, judging-day runbook, decisions, and done log**: check it first to pick the next phase |
 
 ## Hard rules (never break)
 1. **Privacy** (see docs/04): never store/show/log reporter name, phone, exact location. Area only.

@@ -1,135 +1,326 @@
-# PROGRESS — the plan, what's built, and how to test it
+# PROGRESS — Community Scam Map (Mitigata CyberForge)
 
-This file is the **team's plan and status board** (it replaces the step order in
-`docs/08-implementation-plan.md`). Source of truth for *what* to build: `docs/00-prd.md`.
-Claude Code: after each phase, tick it here and add an entry to the **Done log** at the bottom
-(format in `docs/10-working-agreement.md`). Newest entry first.
+> **What this file is:** the team's single reference: the full step-by-step plan, what's done, how to
+> test it, the decisions we made, and the judging-day checklist.
+> **Source of truth for *what* to build:** `docs/00-prd.md` (the organisers' brief). This file decides *order* and *status*.
+> **How to update:** tick `[x]` tasks as they finish, update the status table, and add an entry to the
+> **Done log** (§10) with how to test it. Report format: `docs/10-working-agreement.md`.
 
-**Live server:** https://mitigata-hackathon-scam-map.onrender.com (`/docs` for clickable tests)
-**Sample requests:** `tools/samples/demo_examples.txt`
-
----
-
-## Score map: where the 100 + 7 points come from ([PRD §8])
-| Row | What they check | Pts | How | Covered by phase |
-|---|---|---|---|---|
-| 1 | Stops fake reports (bakery ×40, 22 accounts on one Wi-Fi, 1 person ×6, junk) | 20 | Test tool | P1 (+ done: junk, same person) |
-| 2 | Lookup right answer, all formats match, < 0.5 s | 15 | Test tool | ✅ done; P1 keeps it right, P10 keeps it fast |
-| 3 | Map + alerts (spike → alert, normal → none, new type → alert, month-old not on map) | 10 | Test tool | P3 |
-| 4 | Privacy (masking, no reporter location, careful wording) — **a slip = disqualified** | 15 | Test tool + judge | ✅ backend done; P4 audit; P5 UI |
-| 5 | Server + licence: 4-step live demo on https, no restart | 15 | Judge | P2 |
-| 6 | Easy to report: < 60 s on a phone with a stopwatch, in **Hindi or icons only**, no login | 15 | Judge | P5 + P6 |
-| 7 | Demo + code: runs from README, trust rules + licence explained, pitch | 10 | Judge | P7 |
-| B1 | Verified business / helplines show "Verified business" | +3 | Test tool | ✅ done |
-| B2 | Dispute feature | +2 | Test tool | P4 |
-| B3 | Fake reports never set off an alert | +2 | Test tool | P1 + P3 (trusted-only counting) |
-**Tie-break:** more bonus points, then **faster report time** (P5/P6 matter twice).
+## Contents
+1. [Quick reference](#1-quick-reference)
+2. [Status at a glance](#2-status-at-a-glance)
+3. [Score map](#3-score-map-prd-8)
+4. [Step-by-step plan](#4-step-by-step-plan)
+5. [Always-on rules](#5-always-on-rules-every-phase)
+6. [Submission checklist](#6-submission-checklist-prd-10)
+7. [Judging-day runbook](#7-judging-day-runbook)
+8. [Decisions we made (and why)](#8-decisions-we-made-and-why)
+9. [Risks and open questions](#9-risks-and-open-questions)
+10. [Done log](#10-done-log-newest-first)
 
 ---
 
-## Status board
-| Phase | Feature | Points | Status |
-|---|---|---|---|
-| — | Skeleton + deploy, normalizer, DB, `POST /reports`, `GET /lookup`, `POST /admin/reset` | (row 2, B1) | ✅ done & live |
-| P1 | Fake-report scenarios script + **trust rules** + 429 rate limit | 20 + 2 | 🟡 scenarios script ✅ (29/42 pass); trust rules next |
-| P2 | **Licence** (sign, check every request, 403, upload renews, clock guard) + 2 licence files | 15 | ⬜ |
-| P3 | **Map + alerts** APIs (`/map`, `/alerts`: SPIKE + NEW_TYPE, trusted reports only) | 10 + 2 | ⬜ |
-| P4 | **Disputes** (`POST /challenges`) + **privacy audit** + latency check | 2 + protects 15 | ⬜ |
-| P5 | **Frontend** (Report, Lookup, Map/heatmap, Licence-expired screen) — teammate can start now | 15 | ⬜ (parallel) |
-| P6 | **Hindi + icons-only** report flow (build into P5, not after) | part of 15 | ⬜ (with P5) |
-| P7 | **README + demo video + pitch + rehearsal ×3** + submission checklist | 10 | ⬜ |
-| P8 | Extras if time: Hindi voice report (Sarvam), explain panel, lookalike domains, QR scan | tie-break | ⬜ |
-| — | Keep-awake: UptimeRobot → `/health` every 5 min | protects all | ⬜ (do before judging) |
-| always | **Privacy** + **speed** rules apply to every phase (see "Always-on rules") | 15 + 15 | ongoing |
-(⬜ not started · 🟡 in progress · ✅ done)
+## 1. Quick reference
+| What | Where |
+|---|---|
+| Live server | https://mitigata-hackathon-scam-map.onrender.com |
+| Clickable API tester | `/docs` on the live server or http://localhost:8000/docs |
+| Repo | https://github.com/SanjayRao06/MITIGATA_HACKATHON_SCAM_MAP |
+| Database console (Neon) | https://console.neon.tech/app/projects/winter-hill-45116684 (Tables / SQL Editor) |
+| Sample requests (copy-paste) | `tools/samples/demo_examples.txt` |
+| Attack/real-scam test runner | `tools/scenarios.py` |
+| Brief / rules / scoring | `docs/00-prd.md` (§3 features, §5 privacy, §6 licence, §8 scoring, §A API) |
 
-**Why this order:** P1 is the biggest single score and the hardest, and the map/alerts (P3) must
-count only *trusted* reports, so trust comes first. P2 is mechanical but demo-critical and must be
-proven on the live https server early. P5/P6 don't block the backend, so a teammate builds them in
-parallel against the live API from now on. P7 last, but the README grows as we go.
-
----
-
-## Phases in detail
-
-### P1 — Fake reports: scenarios + trust rules (20 pts + 2 bonus) · docs/03
-**Build**
-- `tools/scenarios.py`: sends realistic fake + real report sets (times relative to now) and prints
-  PASS/FAIL: spammer ×6, 22 accounts one `ip_prefix`, 40-friend bakery burst (copy-paste/empty
-  notes, ₹0, no screenshots, one area), junk, real campaign (8 people / 6 networks / own words /
-  some money lost), small real (2 people). Run it after every rule change ([PRD §11]).
-- `trust.py` layers: L1 same `reporter_id` = 1 + **429** (>3/h, >20/day, timed by report times);
-  L2 same `ip_prefix` + same number within 24 h = 1 person; L3 near-identical notes merge, empty /
-  generic notes weigh less, personal notes more; L4 coordination score (burst, new accounts, low
-  network/area/text diversity, no loss/no screenshot) → penalty + blocks KNOWN_SCAM; L5 new users
-  0.6, proven reporters up to 1.0, reporters of verified/disputed numbers 0.3.
-- Per-report `trusted` flag (used by map + alerts). Fix: duplicate `report_id` only counts as a
-  retry if reporter + identifier also match.
-**Done when** every scenario PASSES (fakes never KNOWN_SCAM, real campaign is KNOWN_SCAM).
-**Judges test** the 4 tricks from [PRD §4] against the live server; any trick making KNOWN_SCAM costs points.
-
-### P2 — Licence (15 pts) · docs/05
-**Build** `tools/keygen.py` (private key stays on laptop, gitignored), `tools/make_license.py`
-(`--minutes 5`, `--days 30`), `license.py` (Ed25519 verify, middleware on **every** request except
-`/health` + `/license`, `GET/POST /license`, stored in DB, clock-rollback guard). Expired → 403
-`{"error":"LICENSE_EXPIRED"}`, **data never deleted**; new upload works **without restart**.
-**Done when** the 4-step demo works on the live https URL. Make the two submission licence files.
-**Judges test** live: `GET /license` → upload 5-min licence → wait → lookup 403 + app expired
-screen → upload new licence → works again within a minute, old data still there ([PRD §6]).
-
-### P3 — Map + alerts (10 pts + 2 bonus) · docs/06
-**Build** `GET /map?pincode=&days=7&radius_km=2` (one cluster per area in radius with reports in
-window, **area centre from Appendix B, never a reporter's location**, severity CRIT/HIGH/MED);
-`GET /alerts?pincode=` with **SPIKE** (last 24 h ≥ 2× daily average of the 7 days before AND ≥ 5)
-and **NEW_TYPE** (type in last 24 h not seen in that area in the 30 days before). Trusted reports only.
-**Heatmap** = the frontend drawing `/map` clusters with colour/size by count (P5) — the API stays as the PRD says.
-**Judges test** spike area → alert; steady area → none; new scam type → alert; month-old reports not on map.
-
-### P4 — Disputes + privacy audit (2 bonus, protects 15) · docs/01 §7, docs/04
-**Build** `POST /challenges` → 201 `{challenge_id, status:"under_review"}`; lookup then shows
-`challenged:true` and is never KNOWN_SCAM. Audit: banned-words test (scammer/fraud/criminal),
-DB has no raw reporter/IP/lat-lng columns, logs show nothing personal, p95 lookup < 500 ms over 200 calls.
-**Judges test** dispute a number → lookup `challenged:true`, not KNOWN_SCAM ([PRD §A.7]).
-
-### P5 + P6 — Frontend, Hindi, icons (15 pts + tie-break) · docs/07
-**Build** a mobile website (design in Google Stitch, then code it), served by our server:
-- **Report** in < 60 s, **no login**: tap channel icon → paste identifier → pick scam type (icons) →
-  area (pick from list, or GPS converted **on the phone** to nearest area; coordinates never sent) → post.
-  Anonymous `reporter_id` = random id in localStorage.
-- **Lookup**: paste → colour card by verdict, careful wording, masked value, safety advice for the scam type.
-- **Map**: Leaflet + OpenStreetMap (free, no card; Google Maps needs billing) with a Google-Maps-like
-  light style; heat circles per area from `/map`; alerts banner from `/alerts`.
-- **Licence expired** full screen on any 403 `LICENSE_EXPIRED`, auto-recovers.
-- **EN/HI toggle** from day one (all text in i18n files) + **icons-only** report path.
-- Helplines **1930** and **cybercrime.gov.in** visible.
-**Judges test** stopwatch report on a phone, then again in Hindi or icons only (> 2 min or a login = 0).
-
-### P7 — README, video, pitch, submission (10 pts) · docs/09
-**Build** README a judge can follow alone: run locally + live URL, every endpoint with copy-paste
-examples, **trust rules with the attack table** (why the bakery wasn't labelled), **licence explained**
-+ 4-step demo, privacy choices, architecture. 3-min video. Rehearse the licence demo ×3 on live.
-**Submission checklist ([PRD §10]):** Git repo · public server URL (awake) · app link · README ·
-≤ 3-min video · **2 licence files** (5-min + long) · private key NOT in repo.
-
-### P8 — Extras (only after P1–P7)
-Hindi voice report via Sarvam (phone side only, optional, never in trust rules), explain panel,
-lookalike-domain detection, UPI QR scan.
+**Run it locally (PowerShell):**
+```powershell
+cd "C:\Users\Avi Verma\Documents\Code\Scam_Map\server"
+.venv\Scripts\python -m pytest -q                                      # all tests
+.venv\Scripts\python -m uvicorn app.main:app --reload --no-access-log  # server on :8000
+```
+**Run the attack scenarios** (server started with `$env:DATABASE_URL="sqlite:///./scenarios.db"`), from the repo root:
+```powershell
+server\.venv\Scripts\python tools\scenarios.py --base http://localhost:8000 --latency 200
+```
+**Git routine:** `git pull` before you start → work → `git add . ; git commit -m "..." ; git push`.
+Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (already gitignored).
 
 ---
 
-## Always-on rules (every phase)
-**Privacy ([PRD §5] — any slip disqualifies):** never store/show reporter name, phone, exact location
-(area only) · mask until ≥ 3 distinct reporters after trust rules · say "reported", never
-"scammer/fraud" · no scraping of personal data · nothing personal in logs.
-**Speed:** lookup < 0.5 s (indexed reads, Singapore region, DB kept awake) · report flow < 60 s.
-**Contract:** endpoint paths, fields, status codes and verdict strings exactly as [PRD §A].
-**No hardcoded test values** — only `data/verified.json` may list identifiers.
-**Scam categories:** use the PRD's 12 `scam_type`s + 6 channels as-is (unknown → "other").
-The UI may group them (e.g. "Bank/KYC", "Calls", "Money/UPI") but the API values don't change.
+## 2. Status at a glance
+| Phase | Feature | Points | Owner | Status | Next action |
+|---|---|---|---|---|---|
+| P0 | Foundation: deploy, normalizer, DB, `/reports`, `/lookup`, `/admin/reset` | row 2, B1 | both | ✅ done & live | — |
+| P1 | Fake reports: scenarios + **trust rules** + 429 rate limit | 20 + 2 | **Avi** | 🟡 scenarios ✅ (Sanjay); trust rules in progress | Build `trust.py` |
+| P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ⬜ | start now |
+| P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ⬜ | after P1 |
+| P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ⬜ | after P3 |
+| P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
+| P6 | **Frontend** (Report, Lookup, Map heatmap, Expired screen) + **Hindi + icons** | 15 | **Sanjay** | ⬜ | start after P2 (or in parallel) |
+| P7 | **Ops**: keep-awake, frontend deploy, live run of all scenarios | protects all | **Sanjay** | ⬜ | UptimeRobot anytime |
+| P8 | **README + video + pitch + rehearsal** | 10 | **both** (split below) | ⬜ | grows as we go; finish last |
+| P9 | Extras: Hindi voice (Sarvam), explain panel, lookalike domains, QR | tie-break | whoever is free | ⬜ | only if time |
+Legend: ⬜ not started · 🟡 in progress · ✅ done
+
+**Order and why:** P1 first, because it's the biggest score (20) and map/alerts must count only *trusted*
+reports. P2 is demo-critical and must be proven on the live https server early, so it starts in parallel.
+Then P3, P4, P5 close the API. P6 runs in parallel against the live API. P7 before judging. P8 last
+(but the README grows with every phase). P9 only after everything else.
+
+### Team split: two groups that can work independently
+| | **Group A: Avi, "server brain"** | **Group B: Sanjay, "licence, app and delivery"** |
+|---|---|---|
+| Phases | P1 trust rules + 429 · P3 map + alerts · P4 disputes · P5 privacy/speed audit | P2 licence · P6 frontend + Hindi + icons · P7 ops · P8 video + rehearsal lead |
+| Points | 20 + 10 + 15 (privacy) + 2 + 2 + 3 (done) | 15 + 15 + 10 (README/pitch shared) |
+| Files you own | `server/app/trust.py`, `lookup.py`, `reports.py`, `geo.py`, `alerts.py`, `challenges` code; their tests; `tools/scenarios.py` updates | `server/app/license.py`, `tools/keygen.py`, `tools/make_license.py`, `licenses/` (gitignored), everything in `web/`, Render + UptimeRobot settings |
+| README sections | Trust rules + attack table, privacy, map/alerts, API examples | Licence + 4-step demo, run instructions, frontend, architecture, pitch |
+**Why this split works:** the API shapes are fixed by the PRD, so Sanjay can build the app against the
+live server today without waiting. Licence code lives in its own file. The only shared file is
+`server/app/main.py`, where each person adds a few lines (Sanjay: one middleware line + `/license` routes;
+Avi: `/map`, `/alerts`, `/challenges` routes).
+**Rules to avoid clashes:** `git pull` before starting and before pushing · small, frequent commits ·
+don't edit the other group's files. If you must touch `main.py`, keep it to adding lines and push soon ·
+run `pytest -q` before every push · tell the other person when you change anything in the API replies.
+**Hand-offs:** Avi → Sanjay: the `/map` + `/alerts` reply shapes (already fixed in [PRD §A.4–A.5]) and
+the extra `message` / `masked` fields in `/lookup`. Sanjay → Avi: the licence middleware (all of Avi's
+tests must still pass with a valid test licence loaded).
 
 ---
 
-## Done log (newest first)
+## 3. Score map ([PRD §8])
+| Row | What they check | Pts | Checked by | Our phase | Status |
+|---|---|---|---|---|---|
+| 1 | Stops fake reports: bakery ×40, 22 accounts on one Wi-Fi, 1 person ×6, junk → none become "Known scam" | 20 | Test tool | P1 | junk ✅, 1 person ✅, Wi-Fi ❌, bakery ❌ |
+| 2 | Lookup right answer; all formats match; < 0.5 s | 15 | Test tool | P0 ✅, P1, P5 | ✅ |
+| 3 | Map + alerts: spike → alert, normal → none, new type → alert, month-old not on map | 10 | Test tool | P3 | ❌ |
+| 4 | Privacy: < 3 reporters hidden, map never shows a person's location, careful wording. **Reporter identifiable = disqualified** | 15 | Test tool + judge | P0 ✅, P5, P6 | backend ✅ |
+| 5 | Server + licence: 4-step live demo on https, **no restart** | 15 | Judge | P2 | ❌ |
+| 6 | Easy to report: phone + stopwatch < 60 s; works in **Hindi or icons only**; **no login** | 15 | Judge | P6 | ❌ |
+| 7 | Demo + code: runs from README; trust rules + licence explained; pitch | 10 | Judge | P8 | ❌ |
+| B1 | Verified businesses/helplines → "Verified business" | +3 | Test tool | P0 | ✅ |
+| B2 | Dispute feature | +2 | Test tool | P4 | ❌ |
+| B3 | Fake reports never set off an alert | +2 | Test tool | P1 + P3 | ❌ |
+**Tie-break:** more bonus points, then **faster report time** (P6 counts twice).
+**Automatic disqualification:** reporter identifiable · exact locations stored · personal data scraped · code written before the event.
+**Judges use secret data** and check for hardcoded values like `if number == "+91..."`.
+
+---
+
+## 4. Step-by-step plan
+
+### P0 — Foundation ✅ (done & live)
+- [x] FastAPI app, `GET /health`, privacy-safe request logging (uvicorn access log off)
+- [x] Deployed to Render (free, Singapore) + Neon Postgres (free, Singapore), env vars set
+- [x] Normalizer for phone / UPI / link / SMS sender + junk rejection (`normalize.py`)
+- [x] Reference data loader: 25 areas, verified list, scam types, channels (`reference.py`)
+- [x] Database tables: reports, identifiers, reporters, challenges, license, clock_guard (`db.py`)
+- [x] `POST /reports` with 400 rules, hashed reporter/IP, `case_id`, `merged`, duplicate `report_id` = retry
+- [x] `GET /lookup`: 4 verdicts, verified wins, masking < 3 people, evidence without reporter data, careful wording
+- [x] `POST /admin/reset` (keeps licence)
+- [x] 422 → 400 everywhere; `/docs` shows real codes and an editable example body
+- [x] Neon keep-alive ping every 4 min
+- [x] `tools/scenarios.py` attack/real-scam runner (teammate) + sample requests txt
+
+### P1 — Fake reports: trust rules (20 pts + 2 bonus) · read docs/03
+**Goal:** none of the 4 tricks makes a number KNOWN_SCAM, and real campaigns still do.
+- [x] 1.1 Scenario runner `tools/scenarios.py` (42 checks; today 29 PASS)
+- [ ] 1.2 `trust.py` skeleton: one function `assess(reports) -> {effective, distinct_reporters, verdict inputs, trusted ids, explain}`; constants at the top (tunable)
+- [ ] 1.3 **L1 same person:** group by reporter hash; each counts once per number
+- [ ] 1.4 **Rate limit → 429:** > 3 reports per reporter per hour, > 20 per day, **timed by the report's own `reported_at`/`occurred_at`**, not arrival time
+- [ ] 1.5 **L2 same network:** same `ip_prefix` hash + same number + within 24 h → 1 effective person
+- [ ] 1.6 **L3 notes:** normalize text; near-duplicate notes (3-word shingles, Jaccard ≥ 0.8) merge into one source; empty ×1.0, generic short ("scam") ×0.8, personal ≥ 8 words ×1.2
+- [ ] 1.7 **L4 coordination score** (last 48 h): burst, newness, low network/area/text diversity, no loss + no screenshot → ≥ 0.6 ⇒ new accounts ×0.2 and KNOWN_SCAM blocked
+- [ ] 1.8 **L5 reputation:** new 0.6 → proven up to 1.0; reporters of verified/disputed numbers 0.3
+- [ ] 1.9 **Verdict:** KNOWN_SCAM needs effective ≥ 3.0 AND ≥ 3 distinct networks AND coordination < 0.6 AND not challenged; `distinct_reporters` = people after trust rules (drives masking)
+- [ ] 1.10 Store a per-report **`trusted`** flag (feeds P3 map/alerts)
+- [ ] 1.11 Fix: duplicate `report_id` counts as a retry only if reporter + identifier also match
+- [ ] 1.12 `GET /debug/explain?type=&value=` (behind an env flag; hashed data only) for the demo
+- [ ] 1.13 Unit tests per layer + full scenario run; then deploy and re-check on live
+**Done when:** all trust rows in `scenarios.py` PASS **and** every real-campaign row stays PASS.
+**Judges test:** load the 4 tricks from [PRD §4] into the live server, then look up the targets: none may be KNOWN_SCAM.
+
+### P2 — Licence (15 pts) · read docs/05
+**Goal:** the 4-step demo works live on https with no restart.
+- [ ] 2.1 `tools/keygen.py` → `private.key` (gitignored, laptop only); paste the public key into `license.py`
+- [ ] 2.2 `tools/make_license.py --licensee "Demo Bank" --minutes 5` / `--days 30` → JSON with Ed25519 signature
+- [ ] 2.3 `license.py`: verify signature over canonical `{licensee, expires_at}`; load from DB at start
+- [ ] 2.4 Middleware on **every** request except `/health`, `/license` → expired / missing / bad / clock tampered ⇒ 403 `{"error":"LICENSE_EXPIRED"}`
+- [ ] 2.5 `GET /license` → licensee, expires_at, status, seconds_left
+- [ ] 2.6 `POST /license` → bad signature 400; good ⇒ swap in memory + save to DB, **no restart**
+- [ ] 2.7 **Never delete data** on expiry (lock only); reset keeps the licence
+- [ ] 2.8 Clock-rollback guard: remember the latest time seen; clock goes back > 2 min ⇒ treated as expired
+- [ ] 2.9 Tests: tampered date → 400; valid → 200; expired → 403 (health/license still 200); renew → 200 with data intact; rollback → 403
+- [ ] 2.10 Upload a long licence to the live server; rehearse the 4 steps live
+- [ ] 2.11 Prepare **2 licence files** for submission (5-min generated at demo time + long one)
+**Done when:** steps 1–4 below work on the live URL.
+**Judges test (live):** ① `GET /license` shows licensee + expiry → ② upload a 5-min licence → ③ after 5 min a lookup fails and the app shows the expired screen → ④ upload a new licence → works again within a minute, old data still there ([PRD §6]).
+
+### P3 — Map + alerts (10 pts + 2 bonus) · read docs/06
+**Goal:** correct clusters and alerts from **trusted** reports only.
+- [ ] 3.1 `geo.py`: area lookup, haversine distance, clusters within `radius_km` (default 2), `days` (default 7)
+- [ ] 3.2 `GET /map`: one cluster per area with reports in the window; count, top scam type, severity (≥10 CRIT, ≥5 HIGH, else MED); **lat/lng from Appendix B only**; unknown pincode → 400
+- [ ] 3.3 `alerts.py` **SPIKE:** last 24 h ≥ 5 AND ≥ 2 × (previous 7 days ÷ 7); output `count`, `baseline_per_day`
+- [ ] 3.4 **NEW_TYPE:** a scam type in last 24 h not seen in that area in the 30 days before (decide: need ≥ 2 independent reports; document it)
+- [ ] 3.5 `GET /alerts?pincode=` → `{"alerts": []}` when nothing unusual
+- [ ] 3.6 Only trusted reports count (fakes never cause alerts → +2)
+- [ ] 3.7 Tests: radius cases (2 km = only own area; 4 km adds Bellandur + Koramangala), month-old excluded, spike / steady / new-type
+**Done when:** all map/alert rows in `scenarios.py` PASS.
+**Judges test:** spike area → SPIKE; steady area → none; new scam type → NEW_TYPE; 30-day-old reports absent from `/map`.
+
+### P4 — Disputes (+2 bonus) · read docs/01 §7
+- [ ] 4.1 `POST /challenges`: normalize identifier (junk → 400), require claimant name + email, create case if new
+- [ ] 4.2 Save challenge (`under_review`), set `challenged = true` → 201 `{challenge_id, status:"under_review"}`
+- [ ] 4.3 Lookup: `challenged: true`, never KNOWN_SCAM (downgrade to SUSPICIOUS), message "A business disputed these reports - under review"; verified stays verified
+- [ ] 4.4 Claimant name/email/proof never logged or returned
+- [ ] 4.5 Tests (KNOWN_SCAM → challenge → SUSPICIOUS + challenged)
+**Judges test:** challenge a number, then lookup shows `challenged: true` and isn't KNOWN_SCAM ([PRD §A.7]).
+
+### P5 — Privacy + speed audit (protects 15 + 15) · read docs/04
+- [ ] 5.1 Banned-words test over `server/` and `web/` strings: scammer, fraud, criminal, "this person is"
+- [ ] 5.2 DB audit: no raw reporter_id / IP / name / phone / lat-lng columns
+- [ ] 5.3 Log audit: hit every endpoint; logs show only method, path, status, ms
+- [ ] 5.4 Masking check in API **and** UI (1 and 2 reporters hidden, 3 shown)
+- [ ] 5.5 Latency: p95 lookup < 500 ms over 200 calls on the **live** server (`scenarios.py --latency 200`)
+- [ ] 5.6 Grep for hardcoded identifiers outside `data/verified.json`
+**Done when:** every box in docs/04's checklist is ticked.
+
+### P6 — Frontend + Hindi + icons (15 pts + tie-break) · read docs/07 · can start now in parallel
+**Goal:** a judge reports a scam on a phone in < 60 s (target < 30 s), also in Hindi or icons only, no login.
+- [ ] 6.1 Design screens in **Google Stitch** (Home, Report, Lookup, Map, Expired), phone width 360–414 px, tap targets ≥ 48 px
+- [ ] 6.2 Project setup in `web/` (Vite + React or plain JS); API base URL in one config constant
+- [ ] 6.3 **i18n from day one:** `en.json` + `hi.json`, every visible string from them; EN | हिंदी toggle
+- [ ] 6.4 **Home:** two big buttons (Check a number / Report a scam) + helpline strip (1930 tel: link, cybercrime.gov.in)
+- [ ] 6.5 **Report (one screen):** channel icon tiles (exact PRD strings) → when chips (Just now / Today / Yesterday) → paste box with auto-detected type chip → area dropdown (remembered; optional "use my location" converted **on the phone** to nearest area, coordinates discarded) → optional scam-type icons, note, amount → Submit → "Thanks. Reported anonymously." + 1930
+- [ ] 6.6 **Icons-only path:** every choice is an icon with a label; works without reading
+- [ ] 6.7 Anonymous `reporter_id` = random UUID in localStorage; never ask for name or phone; **no login**
+- [ ] 6.8 **Lookup:** paste box → colour card (red KNOWN_SCAM / amber SUSPICIOUS / grey NO_REPORTS / green VERIFIED), masked value, "Reported by N people near you", last seen, **safety advice for the scam type**, "Under review" badge if challenged
+- [ ] 6.9 **Map / heatmap:** Leaflet + OpenStreetMap with a light Google-Maps-like style (free, no card); circles at area points sized/coloured by count and severity from `/map`; alerts banner from `/alerts`
+- [ ] 6.10 **Licence expired** full screen (EN + HI) on any 403 `LICENSE_EXPIRED`; polls `/license` every 20 s and recovers
+- [ ] 6.11 UI groups the 12 scam types visually (e.g. Calls / Bank & KYC / Money & UPI / Jobs & offers) but sends the exact PRD values
+- [ ] 6.12 Hidden stopwatch (form open → submit) logged to console for rehearsal
+- [ ] 6.13 Serve the built site from our server (or Vercel/Netlify) and test on a real phone on mobile data
+- [ ] 6.14 If the site is hosted separately from the API: enable CORS on the server for that site's address only
+- [ ] 6.15 `ip_prefix` for real app users: the browser can't know it, so send `"web"` and let the server derive the first 3 parts of the caller's IP **and hash it immediately** (test tool keeps sending its own)
+- [ ] 6.16 Safety-advice text per scam type in `en.json` + `hi.json` (e.g. "Police never arrest anyone on a video call", "Banks never ask for your OTP", "Receiving money never needs a PIN or QR scan")
+**Done when:** stopwatch < 60 s on a real phone in English, Hindi and icons-only; expired screen appears on 403.
+**Judges test:** they report on a phone with a stopwatch, then again in Hindi or using only icons (> 2 min or a login before the form = 0).
+
+### P7 — Ops: keep it alive and proven (protects every live check)
+- [ ] 7.1 **UptimeRobot** monitor → `/health` every 5 min (Render free plan sleeps after ~15 min)
+- [ ] 7.2 Confirm auto-deploy on push is on (Render → Settings)
+- [ ] 7.3 Deploy the frontend; check it works on the live https URL from a phone
+- [ ] 7.4 Run `scenarios.py` against the live server once (`--allow-remote-reset`), then reset
+- [ ] 7.5 Long licence uploaded on live; `GET /license` valid through judging day
+- [ ] 7.6 Check Neon free compute hours aren't running out (keep-alive uses some)
+
+### P8 — README, video, pitch, rehearsal (10 pts) · read docs/09
+- [ ] 8.1 README: what it is, live URL, run locally in 3 commands, every endpoint with copy-paste examples
+- [ ] 8.2 README: **trust rules** with the attack table (why the bakery wasn't labelled; why real campaigns pass)
+- [ ] 8.3 README: **licence** explained (private/public key, signature, check on every request, renew without restart, clock guard) + the 4-step demo commands
+- [ ] 8.4 README: privacy choices (hashing, area only, masking, logs), architecture diagram, decisions
+- [ ] 8.5 README: "Judge's self-test" section: scenarios a judge can run alone (use `demo_examples.txt` + `scenarios.py`)
+- [ ] 8.6 Pitch (2 min): Ravi's father / Priya story → how it works → trust rules → licence → privacy → how a bank deploys it
+- [ ] 8.7 Demo video ≤ 3 min (report, lookup formats, attack stopped, map/alert, licence expiry + renew)
+- [ ] 8.8 Rehearse the full demo **3 times** on the live server (docs/09)
+- [ ] 8.9 Demo data loader: one command that fills the live server with a lively, realistic set (busy areas, a spike, a new type, a few verified lookups) right after reset, for the map and alerts part of the demo
+
+### P9 — Extras (only after P1–P8 are done)
+- [ ] 9.1 Hindi **voice** reporting via Sarvam (phone side only; optional; never inside trust rules; nothing logged)
+- [ ] 9.2 Explain panel in the UI ("why this verdict")
+- [ ] 9.3 Lookalike-domain detection (e.g. `sbi-kyc.in` vs `sbi.co.in`)
+- [ ] 9.4 QR scan for UPI IDs · share-target from SMS app
+- [ ] 9.5 Organiser logs replay at the venue (if they give us logs): parse → replay → check verdicts look sane
+
+---
+
+## 5. Always-on rules (every phase)
+**Privacy ([PRD §5]; any slip disqualifies)**
+1. Never store or show a reporter's name, phone or exact location. Area only (pincode/locality/city from our list).
+2. Mask identifiers until ≥ 3 distinct reporters **after trust rules** (`98XXXXX210`, `r***@okaxis`, `sbi***.in/...`, `HD****`).
+3. Say "reported", never "scammer / fraud / criminal / this person is".
+4. No scraping of social media or people-search sites.
+5. Nothing personal in logs: method, path, status, ms only.
+
+**Contract:** paths, field names, status codes and verdict strings exactly as [PRD §A]. No auth on the 7 endpoints.
+**No hardcoded test values:** only `server/app/data/verified.json` may list identifiers.
+**Time:** windows use each report's `occurred_at` vs the server clock; output in IST `+05:30`.
+**Speed:** lookup < 0.5 s (indexed reads, Singapore, DB kept awake); report flow < 60 s.
+**Scam categories:** the PRD's 12 `scam_type`s and 6 channels as-is; unknown → `other` / `Something else`.
+**Secrets:** private licence key, `.env.local`, DB password never in git.
+**Every phase ends with:** tests pass → PROGRESS updated → pushed → checked on the live server.
+
+---
+
+## 6. Submission checklist ([PRD §10])
+- [ ] Code in the Git repo (no private key, no `.env.local`)
+- [ ] Public server URL working (and kept awake) during judging
+- [ ] The app: mobile website link (APK optional)
+- [ ] README: how to run, how the trust rules work, how the licence works
+- [ ] Demo video ≤ 3 minutes
+- [ ] Two licence files: one expiring in 5 minutes (generate at demo time) + one long one
+
+---
+
+## 7. Judging-day runbook
+**T-30 min**
+- [ ] `/health` warm on the live URL; UptimeRobot green
+- [ ] `GET /license` shows the long licence, valid
+- [ ] `POST /admin/reset`, then load demo data
+- [ ] Phone on mobile data, site bookmarked, language EN
+- [ ] Laptop: `private.key`, `tools/make_license.py`, `licenses/long.json`, terminal open
+- [ ] Backup screen recording of the full demo
+
+**Live run (~8–10 min). Start the 5-min licence first and demo the rest while it runs down.**
+1. Licence status → generate + upload the 5-min licence ("clock's ticking")
+2. Report on the phone with a stopwatch (< 30 s), then in Hindi / icons only
+3. Lookup: same number in 3 formats → same answer; masked (2 people) vs shown (3+); `HDFCBK` / 1930 → verified
+4. Attacks: run the scenarios → bakery / Wi-Fi farm / spammer not KNOWN_SCAM; real campaign KNOWN_SCAM
+5. Map + alerts: spike area SPIKE, new type NEW_TYPE, quiet area none, fakes caused none
+6. Dispute → `challenged: true`, never KNOWN_SCAM
+7. After 5 min: lookup → expired screen; `/health` still 200
+8. Upload the long licence → works within a minute, same data
+9. Privacy recap: hashed ids, area only, masking, a log line
+10. Pitch close
+
+**Questions to have answers for:** why wasn't the bakery labelled · what if a real scam comes in a burst ·
+what stops editing the licence date · what if the clock is set back · how is lookup kept fast.
+
+---
+
+## 8. Decisions we made (and why)
+| Decision | Why |
+|---|---|
+| Render + Neon, both free, Singapore | No card allowed; Singapore is closest to India for the 0.5 s lookup |
+| Laptop uses SQLite and ignores Neon's URL | Local tests or a local reset can never wipe the judges' live data |
+| Lookups count reports live (2 indexed queries) | Always correct when the test tool sends reports in parallel; still milliseconds |
+| Neon keep-alive ping every 4 min + UptimeRobot for Render | Free tiers sleep; waking costs 1–60 s |
+| Reporter id and IP prefix stored only as HMAC hashes | Can still count "same person / same network", but a DB dump reveals nobody |
+| Locality/city taken from our area list, not the request | Nobody can slip an exact address into the DB |
+| Verified list always wins | Rival report-bombing can't label a real bank or bakery (+3 bonus) |
+| Rate-limit windows use report timestamps, not arrival | The test tool replays weeks of reports in seconds |
+| Duplicate `report_id` = retry, not counted again | Retries can't inflate counts (P1 tightens it to same reporter + number) |
+| `type` ignores case/spaces; 422 converted to 400 | PRD wants 400; strictness only loses real lookups |
+| Junk phone rules: repeated digit, rising run, bad short codes | PRD junk examples; falling runs allowed (PRD's own 9876543210) |
+| Use the PRD's 12 scam types, no new categories | The test tool sends exactly those; UI may group them |
+| Leaflet + OpenStreetMap instead of Google Maps | Google Maps needs billing; same look with a light style |
+| Hindi + icons built into the frontend from the start | Required for full marks in row 6, not optional |
+| Sarvam (AI) only as an optional phone-side extra | Trust rules must be our own and explainable; outside calls are slow/fragile |
+
+---
+
+## 9. Risks and open questions
+| Risk / question | Plan |
+|---|---|
+| Render free plan sleeps → slow first request | UptimeRobot (P7.1) + warm-up before judging |
+| Network from the judges' laptop to Singapore eats the 0.5 s budget | Keep server time tiny; measure live p95 (P5.5) |
+| Neon free compute hours used by keep-alive | Check usage (P7.6); turn keep-alive off overnight if needed |
+| Trust rules too strict → real scams missed | `scenarios.py` real-campaign rows must stay PASS after every change |
+| Repo owned by teammate → only they can change Render settings | Keep them in the loop for deploy settings and env vars |
+| Database password was shared in chat | Optional: reset it in Neon and update `.env.local` + Render |
+| NEW_TYPE in an area with no history fires on one report | Decide in P3 (require ≥ 2 independent reports) and document |
+
+---
+
+## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
 
 ### Step 3 — Test harness / scenario runner — 2026-10-31
