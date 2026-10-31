@@ -1,12 +1,20 @@
-# Render "blueprint": one always-on web service + one managed Postgres database.
+# Render "blueprint": one web service + one managed Postgres database, both on FREE plans.
 # Deploy: push the repo to GitHub, then in Render choose New > Blueprint and pick this repo.
-# Why "starter" plan: the free plan sleeps after inactivity (cold starts would break the
-# judges' test tool), so the web service must be on a paid always-on plan.
+# NOTE: Render asked us for card details on the Blueprint flow, so we actually deploy by hand
+# (New > Web Service + a free Neon database). The same settings are in PROGRESS.md, Step 0.
+# This file stays as the written record of our settings.
+# Free-plan catches (see PROGRESS.md):
+#  - The web service sleeps after ~15 min with no traffic; the next request then takes
+#    30-60 s. Fix: a free uptime pinger (e.g. UptimeRobot / cron-job.org) hits /health
+#    every 5-10 min. One always-awake service fits inside the 750 free hours/month.
+#  - Its disk is wiped on every restart/redeploy, so ALL state (reports, licence,
+#    clock guard) must live in Postgres, never in local files.
+#  - Free Postgres expires ~30 days after creation - fine for the hackathon.
 services:
   - type: web
     name: scam-map
     runtime: python
-    plan: starter
+    plan: free
     # Singapore is Render's closest region to India: lookups must answer in < 500 ms
     # (PRD §3/§8) and a US region adds ~250 ms of network round-trip on its own.
     region: singapore
@@ -27,5 +35,5 @@ services:
 
 databases:
   - name: scam-map-db
-    plan: basic-256mb
+    plan: free
     region: singapore   # same region as the web service, so DB calls stay fast

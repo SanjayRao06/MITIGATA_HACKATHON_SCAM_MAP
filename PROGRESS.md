@@ -124,7 +124,7 @@ cd server
 - `server/app/privacy.py` — `setup_logging()` + `safe_logging_middleware` (masking/hashing come in Step 2)
 - `server/pytest.ini`, `server/tests/conftest.py` — let `pytest` run from `server/`
 - `server/tests/test_health.py` — /health shape, log has no query string/IP, uvicorn access log off
-- `render.yaml` — deploy config (always-on `starter` plan, `--no-access-log`, health check)
+- `render.yaml` — deploy config (free plans, Singapore region, `--no-access-log`, health check)
 - `.gitignore` — **removed** the 3 lines that ignored `server/app/data/*.json`. The server needs
   those files at startup, so a deploy from git would have crashed without them. They hold public data, not secrets.
 
@@ -144,7 +144,19 @@ curl -s "localhost:8000/health?value=9876543210"
 
 **Known gaps / next:**
 - **Cloud deploy is not done yet.** It needs a GitHub repo plus a Render account, and this folder isn't a git repo yet.
-  Steps: `git init` → push to GitHub → Render → New → Blueprint → pick repo. Then check
-  `curl https://<service>.onrender.com/health` from a phone. The `starter` plan is paid; the free
-  plan sleeps when idle, and the resulting cold starts would break the judges' test tool.
+  Render's Blueprint flow asked us for card details, so we create the service by hand instead (no card):
+  Render → **New → Web Service** → pick the repo → Region **Singapore** → Root Directory `server` →
+  Build `pip install -r requirements.txt` →
+  Start `uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log --proxy-headers` →
+  Instance type **Free** → Health Check Path `/health` → env vars `PYTHON_VERSION=3.11.9`,
+  `HASH_SECRET=<any long random string>`, `DATABASE_URL=<from Neon, see below>`.
+  Database: free **Neon** Postgres. ✅ **Created 2026-10-31:** project `scam-map` (`winter-hill-45116684`),
+  org Avi, region Singapore, branch `main`. The folder is linked via `.neon`, and the connection
+  strings are in `.env.local`. Both files are git-ignored. For Render's `DATABASE_URL`, paste the
+  **pooled** `DATABASE_URL` value from `.env.local`, not the `_UNPOOLED` one.
+  Note: the server doesn't read `.env.local` yet; Step 2 adds that. Then check `https://<service>.onrender.com/health` from a phone.
+- **Free plan only (team decision).** The free web service sleeps after ~15 min idle, and the first
+  request after that takes 30–60 s. Fix: set up a free pinger (UptimeRobot or cron-job.org) to
+  `GET /health` every 5–10 min, and open `/health` yourself just before judging. The disk is wiped
+  on every restart, so all state must go in Postgres. Free Postgres expires after ~30 days.
 - `DATABASE_URL` and `HASH_SECRET` are already set in `render.yaml`, but the code doesn't use them until Step 2.

@@ -31,6 +31,7 @@ missing real scams, (2) a live licence demo that locks/unlocks the server withou
 | `docs/07-frontend.md` | any app screen |
 | `docs/08-implementation-plan.md` | deciding what to do next; each step's "done when" + tests |
 | `docs/09-demo-script.md` | rehearsing / preparing judging day |
+| `docs/10-working-agreement.md` | **every session**: how to report to the user after each feature or bug fix |
 | `server/app/data/*.json` | areas (25 pincodes + lat/lng), verified identifiers, scam types, channels |
 | `PROGRESS.md` | what is already built and how to test it (update it — see below) |
 
@@ -87,4 +88,3 @@ server/app/data/*.json      reference data from the brief's appendix
 server/tests/               pytest per module
 tools/                      make_license.py, keygen.py, scenarios.py, replay_logs.py
 web/                        mobile website
-```
