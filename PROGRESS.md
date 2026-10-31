@@ -218,22 +218,22 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 
 ### P7 — Ops: keep it alive and proven (protects every live check)
 - [x] 7.1 **UptimeRobot** monitor → `/health` every 5 min (Render free plan sleeps after ~15 min)
-- [x] 7.2 Confirm auto-deploy on push is on (Render → Settings) (confirmed 2026-11-01: every push went live in ~1-2 min)
+- [ ] 7.2 Confirm auto-deploy on push is on (Render → Settings)
 - [ ] 7.3 Deploy the frontend; check it works on the live https URL from a phone
 - [ ] 7.4 Run `scenarios.py` against the live server once (`--allow-remote-reset`), then reset
 - [x] 7.5 Long licence uploaded on live; `GET /license` valid through judging day
 - [ ] 7.6 Check Neon free compute hours. Keep-alive is off unless `KEEP_DB_AWAKE=1`: set it on Render the day before judging
 
 ### P8 — README, video, pitch, rehearsal (10 pts) · read docs/09
-- [x] 8.1 README: what it is, live URL, run locally in 3 commands, every endpoint with copy-paste examples (README.md)
-- [x] 8.2 README: **trust rules** with the attack table (why the bakery wasn't labelled; why real campaigns pass)
-- [x] 8.3 README: **licence** explained (private/public key, signature, check on every request, renew without restart, clock guard) + the 4-step demo commands
-- [x] 8.4 README: privacy choices (hashing, area only, masking, logs), architecture diagram, decisions (architecture as a layout + hosting section)
-- [x] 8.5 README: "Judge's self-test" section: scenarios a judge can run alone (use `demo_examples.txt` + `scenarios.py`)
-- [x] 8.6 Pitch (2 min): Ravi's father / Priya story → how it works → trust rules → licence → privacy → how a bank deploys it (written in docs/09: pitch, video shot list, judge questions)
+- [ ] 8.1 README: what it is, live URL, run locally in 3 commands, every endpoint with copy-paste examples
+- [ ] 8.2 README: **trust rules** with the attack table (why the bakery wasn't labelled; why real campaigns pass)
+- [ ] 8.3 README: **licence** explained (private/public key, signature, check on every request, renew without restart, clock guard) + the 4-step demo commands
+- [ ] 8.4 README: privacy choices (hashing, area only, masking, logs), architecture diagram, decisions
+- [ ] 8.5 README: "Judge's self-test" section: scenarios a judge can run alone (use `demo_examples.txt` + `scenarios.py`)
+- [ ] 8.6 Pitch (2 min): Ravi's father / Priya story → how it works → trust rules → licence → privacy → how a bank deploys it
 - [ ] 8.7 Demo video ≤ 3 min (report, lookup formats, attack stopped, map/alert, licence expiry + renew)
 - [ ] 8.8 Rehearse the full demo **3 times** on the live server (docs/09)
-- [x] 8.9 Demo data loader: one command that fills the live server with a lively, realistic set (busy areas, a spike, a new type, a few verified lookups) right after reset, for the map and alerts part of the demo (`tools/scenarios.py --seed 7`: Bengaluru scenarios + 10 more cities; on live add `--allow-remote-reset`)
+- [ ] 8.9 Demo data loader: one command that fills the live server with a lively, realistic set (busy areas, a spike, a new type, a few verified lookups) right after reset, for the map and alerts part of the demo
 
 ### P9 — Extras (only after P1–P8 are done)
 - [ ] 9.1 Hindi **voice** reporting via Sarvam (phone side only; optional; never inside trust rules; nothing logged)
@@ -263,10 +263,10 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 ---
 
 ## 6. Submission checklist ([PRD §10])
-- [x] Code in the Git repo (no private key, no `.env.local`)
+- [ ] Code in the Git repo (no private key, no `.env.local`)
 - [ ] Public server URL working (and kept awake) during judging
 - [ ] The app: mobile website link (APK optional)
-- [x] README: how to run, how the trust rules work, how the licence works
+- [ ] README: how to run, how the trust rules work, how the licence works
 - [ ] Demo video ≤ 3 minutes
 - [ ] Two licence files: one expiring in 5 minutes (generate at demo time) + one long one
 
@@ -341,21 +341,6 @@ what stops editing the licence date · what if the clock is set back · how is l
 
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
-
-### P8 — README, pitch, video plan — 2026-11-01
-**What was built (simple terms):**
-- `README.md`: run in 3 commands, the API, trust rules with the attack table, licence (+ 4-step demo),
-  privacy, map/alerts, speed, judge's self-test, layout.
-- `docs/09-demo-script.md` rewritten with today's real commands, a 2-minute pitch, a ≤ 3-min video shot
-  list and answers to likely judge questions.
-- Demo data for 10 more cities (`scenario_other_cities` in `tools/scenarios.py`), so every city's
-  dashboard has data. 47 checks.
-- `Server-Timing` header (server's own ms) + `tools/latency_check.py` (read-only live speed check).
-- `.githooks/commit-msg` refuses commits that credit an AI tool. Each laptop runs once:
-  `git config core.hooksPath .githooks`
-
-**Still to do (people, not code):** record the video (8.7), 3 live rehearsals (8.8), real-phone
-stopwatch test (P6), load demo data on live, `KEEP_DB_AWAKE=1` the day before judging (7.6).
 
 ### P2 — Licence finished on live — 2026-11-01
 **What was built (simple terms):**
