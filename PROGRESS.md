@@ -117,7 +117,7 @@ tests must still pass with a valid test licence loaded).
 - [x] `GET /lookup`: 4 verdicts, verified wins, masking < 3 people, evidence without reporter data, careful wording
 - [x] `POST /admin/reset` (keeps licence)
 - [x] 422 → 400 everywhere; `/docs` shows real codes and an editable example body
-- [x] Neon keep-alive ping every 4 min
+- [x] Neon keep-alive ping every 4 min, **off by default** to save free compute hours: set `KEEP_DB_AWAKE=1` on Render around judging day
 - [x] `tools/scenarios.py` attack/real-scam runner (teammate) + sample requests txt
 
 ### P1 — Fake reports: trust rules (20 pts + 2 bonus) · read docs/03
@@ -218,7 +218,7 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 - [ ] 7.3 Deploy the frontend; check it works on the live https URL from a phone
 - [ ] 7.4 Run `scenarios.py` against the live server once (`--allow-remote-reset`), then reset
 - [ ] 7.5 Long licence uploaded on live; `GET /license` valid through judging day
-- [ ] 7.6 Check Neon free compute hours aren't running out (keep-alive uses some)
+- [ ] 7.6 Check Neon free compute hours. Keep-alive is off unless `KEEP_DB_AWAKE=1`: set it on Render the day before judging
 
 ### P8 — README, video, pitch, rehearsal (10 pts) · read docs/09
 - [ ] 8.1 README: what it is, live URL, run locally in 3 commands, every endpoint with copy-paste examples
@@ -269,6 +269,9 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 ---
 
 ## 7. Judging-day runbook
+**T-1 day**
+- [ ] Render env var `KEEP_DB_AWAKE=1` (keeps Neon awake so lookups stay < 0.5 s)
+
 **T-30 min**
 - [ ] `/health` warm on the live URL; UptimeRobot green
 - [ ] `GET /license` shows the long licence, valid
@@ -332,6 +335,32 @@ what stops editing the licence date · what if the clock is set back · how is l
 
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
+
+### P6 round 2 — Website feedback fixes — 2026-11-01
+**What was built (simple terms):**
+- **Check:** pick the type first (Phone / UPI ID / Link / SMS sender), then the box shows the matching example and
+  keyboard. If you paste something that's clearly another type, the tab switches for you. The result card shows the exact
+  verdict label (Known scam / Suspicious / No reports / Verified business), "Reported by N people" ("near you" when the
+  reports are within 10 km of your saved area), first/last reported, and a "Dispute these reports" link.
+- **Report:** "Something else" for channel and scam type opens a short "please say what" box (stored, never shown).
+  "Pick date & time" for an exact time. Step 3 renamed to "Their number, UPI ID or link", with type tabs pre-picked from
+  the channel. Proof: Screenshot / Screen recording / Call recording chips (files are NOT uploaded, for privacy). Single
+  centred column; the side "Stay safe" box moved to the thanks screen, matched to the scam type.
+- **Map:** only "Last 7 days" and "Last 24 hours" (30-day option removed, [PRD §3]); the map no longer slides over the top bar.
+- **Dispute:** renamed "Dispute a report", now in the top bar, first in the More menu, a card on Home, and linked from results.
+  A disputed number is **hidden again** while under review (server change in `lookup.py`).
+- **Scenarios:** new dispute scenario (46 checks) and a "Try these on the website" list printed after the table.
+  `--seed 7` gives the same numbers every run.
+- **Ops:** the Neon keep-alive is now opt-in (`KEEP_DB_AWAKE=1`) to save Neon's free compute hours.
+
+**Files touched:** `server/web/app.js`, `i18n.js`, `app.css`, `index.html`; `server/app/lookup.py`, `reports.py`, `db.py`
+(new columns `channel_other`, `scam_type_other`, auto-added at start-up), `main.py`; `tools/scenarios.py`; `server/tests/test_challenges.py`.
+
+**How to test it:** `pytest -q` → 209 passed. A local server needs a licence first (dev.db has none): get
+`licenses/long.json` from Sanjay, start the server, run `python tools/upload_license.py licenses/long.json`, then
+`python tools/scenarios.py --seed 7` → 46/46, and try the printed list on http://localhost:8000.
+
+**Known gaps:** no evidence file upload (decision: privacy + storage); voice input (P9) not built.
 
 ### P2 — Licence — 2026-10-31
 **What was built (simple terms):**

@@ -25,6 +25,8 @@ FUTURE_TOLERANCE = timedelta(minutes=10)
 MAX_AGE = timedelta(days=365)
 # Longest note we keep (notes are only used for copy-paste detection).
 MAX_NOTE_CHARS = 2000
+# Longest "Something else, please say what" text we keep for channel / scam type.
+MAX_OTHER_CHARS = 60
 
 
 class ReportError(ValueError):
@@ -95,6 +97,10 @@ def validate_report(body) -> dict:
         amount = max(0.0, float(body.get("amount_lost_inr") or 0))
     except (TypeError, ValueError):
         amount = 0.0
+    def other_text(key: str):
+        """Optional short free text from the website's "Something else" boxes (None if absent)."""
+        value = body.get(key)
+        return value.strip()[:MAX_OTHER_CHARS] or None if isinstance(value, str) else None
     report_id = body.get("report_id")
     if not isinstance(report_id, str) or not report_id.strip():
         report_id = "rep_" + uuid.uuid4().hex[:12]
@@ -115,6 +121,8 @@ def validate_report(body) -> dict:
         "note": note or None,
         "has_screenshot": bool(body.get("has_screenshot")),
         "amount_lost_inr": amount,
+        "channel_other": other_text("channel_other"),
+        "scam_type_other": other_text("scam_type_other"),
     }
 
 
@@ -217,6 +225,7 @@ def save_report(clean: dict) -> dict:
                     pincode=clean["pincode"], locality=clean["locality"], city=clean["city"],
                     note=clean["note"], has_screenshot=clean["has_screenshot"],
                     amount_lost_inr=clean["amount_lost_inr"], trusted=False,
+                    channel_other=clean["channel_other"], scam_type_other=clean["scam_type_other"],
                 ))
         except IntegrityError:
             # The same report_id was inserted by a parallel retry a moment ago.

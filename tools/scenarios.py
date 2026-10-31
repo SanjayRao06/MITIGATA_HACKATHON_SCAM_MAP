@@ -11,6 +11,9 @@ verified list and the area list from the brief are used as fixed values.
 Usage (from the repo root):
     python tools/scenarios.py --base http://localhost:8000
     python tools/scenarios.py --base http://localhost:8000 --latency 200
+    python tools/scenarios.py --seed 7      # same numbers every run: handy for demos
+After the table it prints "Try these on the website": the numbers/IDs each scenario used and the
+answer the website should show for each, so you can check the same cases by hand.
 Exit code: 0 if every check passed, 1 if any failed.
 """
 
@@ -87,6 +90,11 @@ class Run:
         self.lookup_ms = []        # every lookup's response time, for the latency check
         self.areas = {a["pincode"]: a for a in json.loads(AREAS_FILE.read_text(encoding="utf-8"))}
         self.used_prefixes = set()
+        self.showcase = []         # rows: (scenario, type, value, what the website should show)
+
+    def remember(self, scenario: str, identifier_type: str, value: str, expect: str) -> None:
+        """Note an identifier worth checking by hand on the website (printed after the table)."""
+        self.showcase.append((scenario, identifier_type, value, expect))
 
     # ---- small generators -------------------------------------------------------------------
     def next_id(self, prefix: str) -> str:
@@ -256,6 +264,7 @@ def scenario_spammer(run: Run) -> None:
     statuses = [run.send(run.report("phone", number, 0.9 - i * 0.15, PIN_SPAMMER, person, net,
                                     scam_type="otp-call", note="scam call, fraud"))
                 for i in range(6)]
+    run.remember(name, "phone", number, "Suspicious, 1 person, hidden (4th-6th reports got 429)")
     status, data = run.lookup("phone", number)
     run.check(name, "verdict", "not KNOWN_SCAM", data.get("verdict"), data.get("verdict") != "KNOWN_SCAM")
     run.check(name, "distinct_reporters", "1", data.get("distinct_reporters"), data.get("distinct_reporters") == 1)
@@ -271,6 +280,7 @@ def scenario_wifi_farm(run: Run) -> None:
         run.send(run.report("phone", number, 1.5 - i * 0.06, PIN_WIFI, run.person(), net,
                             scam_type="investment-group",
                             note=run.rng.choice(["", "scam", "fraud number", "fake investment group"])))
+    run.remember(name, "phone", number, "Suspicious, hidden: 22 accounts on one Wi-Fi count as 1")
     _, data = run.lookup("phone", number)
     run.check(name, "verdict", "not KNOWN_SCAM", data.get("verdict"), data.get("verdict") != "KNOWN_SCAM")
     run.check(name, "distinct_reporters", "<= 1", data.get("distinct_reporters"),
@@ -303,6 +313,8 @@ def scenario_bakery(run: Run) -> None:
     # 1) Unlisted bakery number: must not become KNOWN_SCAM and must stay hidden.
     bakery = run.phone()
     bomb("phone", bakery, 40)
+    run.remember(name, "phone", bakery, "Suspicious, hidden: the 40 friends' wave is held back")
+    run.remember(name, "phone", "+91 80 4100 2233", "Verified business (Fresh Bakes), even after 15 fake reports")
     _, data = run.lookup("phone", bakery)
     run.check(name, "verdict (unlisted bakery)", "not KNOWN_SCAM", data.get("verdict"),
               data.get("verdict") != "KNOWN_SCAM")
@@ -334,6 +346,7 @@ def scenario_real_campaign(run: Run) -> None:
                             run.person(), nets[i % 6], scam_type="digital-arrest",
                             note=run.real_note("digital-arrest"), has_screenshot=(i % 3 == 0),
                             amount_lost_inr=lost))
+    run.remember(name, "phone", number, "Known scam, number shown in full, digital arrest")
     _, data = run.lookup("phone", number)
     run.check(name, "verdict", "KNOWN_SCAM", data.get("verdict"), data.get("verdict") == "KNOWN_SCAM")
     run.check(name, "distinct_reporters", ">= 3", data.get("distinct_reporters"),
@@ -375,6 +388,7 @@ def scenario_real_upi(run: Run) -> None:
         run.send(run.report("upi", typed, 40 - i * 7, CAMPAIGN_PINS[(i + 3) % len(CAMPAIGN_PINS)],
                             run.person(), run.network(), channel="UPI request", scam_type="upi-refund-qr",
                             note=run.real_note("upi-refund-qr"), amount_lost_inr=run.rng.choice([0, 4999])))
+    run.remember(name, "upi", upi.upper(), "Known scam (typed in CAPITALS, still matches)")
     _, data = run.lookup("upi", upi)
     run.check(name, "verdict", "KNOWN_SCAM", data.get("verdict"), data.get("verdict") == "KNOWN_SCAM")
     run.check(name, "display_value shown in full", upi, data.get("display_value"), data.get("display_value") == upi)
@@ -387,6 +401,7 @@ def scenario_small_real(run: Run) -> None:
     for i in range(2):
         run.send(run.report("phone", number, 10 + i * 20, CAMPAIGN_PINS[i + 4], run.person(), run.network(),
                             scam_type="otp-call", note=run.real_note("otp-call")))
+    run.remember(name, "phone", number, "Suspicious, 2 people, hidden like 98XXXXX210")
     _, data = run.lookup("phone", number)
     run.check(name, "verdict", "SUSPICIOUS", data.get("verdict"), data.get("verdict") == "SUSPICIOUS")
     run.check(name, "display_value masked", "masked like 98XXXXX210", data.get("display_value"),
@@ -413,6 +428,7 @@ def scenario_old_reports(run: Run) -> None:
     for i in range(4):
         run.send(run.report("phone", number, 30 * 24 + i * 5, PIN_OLD, run.person(), run.network(),
                             scam_type="courier-customs", note=run.real_note("otp-call")))
+    run.remember(name, "phone", number, "Has reports, but Hebbal is NOT on the map (30 days old)")
     status, mp = run.get(f"/map?pincode={PIN_OLD}&days=7&radius_km=2")
     run.endpoint_check(name, f"/map {PIN_OLD} (days=7)", "no cluster for the area", status,
                        lambda: ([c for c in mp.get("clusters", []) if c.get("pincode") == PIN_OLD] or "none",
@@ -465,6 +481,36 @@ def scenario_new_type(run: Run) -> None:
     run.endpoint_check(name, "NEW_TYPE job-offer, no SPIKE", "NEW_TYPE job-offer", status, ok)
 
 
+def scenario_dispute(run: Run) -> None:
+    """4 real people report a number, then its owner disputes it ([PRD §A.7], bonus).
+
+    Before: KNOWN_SCAM. After the dispute: challenged=true, never KNOWN_SCAM, and the number is
+    hidden again while it is under review.
+    """
+    name = "dispute"
+    number = run.phone()
+    for i in range(4):
+        run.send(run.report("phone", number, 30 + i * 6, CAMPAIGN_PINS[i], run.person(), run.network(),
+                            channel="Phone call", scam_type="fake-customer-care",
+                            note=run.real_note("otp-call")))
+    _, before = run.lookup("phone", number)
+    run.check(name, "verdict before dispute", "KNOWN_SCAM", before.get("verdict"),
+              before.get("verdict") == "KNOWN_SCAM")
+    status, reply = run.server.request("POST", "/challenges", {
+        "identifier_type": "phone", "identifier_value": number, "claimant_name": "Demo Sweets",
+        "contact_email": "owner@example.com", "proof_note": "Shop licence and GST certificate."})
+    reply = reply if isinstance(reply, dict) else {}
+    run.check(name, "POST /challenges", "201 under_review", f"{status} {reply.get('status')}",
+              status == 201 and reply.get("status") == "under_review")
+    _, after = run.lookup("phone", number)
+    run.check(name, "after: challenged, not KNOWN_SCAM", "challenged=True, SUSPICIOUS",
+              f"challenged={after.get('challenged')}, {after.get('verdict')}",
+              after.get("challenged") is True and after.get("verdict") != "KNOWN_SCAM")
+    run.check(name, "after: number hidden again", "masked", after.get("display_value"),
+              masked(after.get("display_value")))
+    run.remember(name, "phone", number, "Suspicious + 'Under review' badge, hidden (was Known scam)")
+
+
 def check_latency(run: Run, extra: int) -> None:
     """Lookups must answer in under 500 ms ([PRD §8] row 2). Optionally fire `extra` more lookups."""
     for _ in range(extra):
@@ -479,7 +525,7 @@ def check_latency(run: Run, extra: int) -> None:
 
 SCENARIOS = [scenario_junk, scenario_spammer, scenario_wifi_farm, scenario_bakery, scenario_real_campaign,
              scenario_real_upi, scenario_small_real, scenario_lookup_basics, scenario_old_reports,
-             scenario_spike, scenario_steady, scenario_new_type]
+             scenario_spike, scenario_steady, scenario_new_type, scenario_dispute]
 
 
 # ----------------------------------------------------------------------------- running + printing
@@ -515,6 +561,22 @@ def print_table(run: Run) -> None:
     print(f"{passed}/{len(run.results)} checks passed")
 
 
+def print_showcase(run: Run) -> None:
+    """Print the identifiers to try by hand on the website, with the answer each should give."""
+    print("\nTry these on the website (Check page) - what you should see:")
+    width = max(len(r[2]) for r in run.showcase)
+    for scenario, id_type, value, expect in run.showcase:
+        print(f"  {id_type:<6} {value.ljust(width)}  {expect}   [{scenario}]")
+    print(f"  {'phone':<6} {'12345'.ljust(width)}  Error: not a valid number   [junk]")
+    print("\nMap and alerts (Map page, Bengaluru):")
+    print("  Bellandur        SPIKE alert: 10 reports today vs about 2 a day before")
+    print("  Electronic City  NEW_TYPE alert: first job-offer reports in 30 days")
+    print("  Marathahalli     busy every day, but NO alert (normal for that area)")
+    print("  Whitefield       22 fake accounts: no alert, not on the map")
+    print("  Indiranagar      40 friends' wave: no alert, not on the map")
+    print("  Hebbal           only month-old reports: NOT on the map")
+
+
 def is_local(base: str) -> bool:
     """True when the base URL points at this computer."""
     return urlparse(base).hostname in ("localhost", "127.0.0.1", "::1")
@@ -540,6 +602,7 @@ def main(argv=None) -> int:
     print(f"Running {len(SCENARIOS)} scenarios against {args.base} ...")
     run = run_all(HttpServer(args.base), seed=args.seed, latency_extra=args.latency)
     print_table(run)
+    print_showcase(run)
     return 0 if all(r[4] for r in run.results) else 1
 
 

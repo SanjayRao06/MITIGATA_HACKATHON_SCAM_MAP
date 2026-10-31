@@ -77,17 +77,29 @@ pytest -q                               # all tests
 python ../tools/scenarios.py --base http://localhost:8000   # attack + real-scam scenarios
 ```
 
-## Layout (target)
+## Layout
 ```
-server/app/main.py          FastAPI app, routes wired here
-server/app/normalize.py     identifier parsing + validation (pure functions)
-server/app/db.py            tables + session
-server/app/trust.py         report weighting + verdict
-server/app/privacy.py       masking, hashing, safe logging
-server/app/license.py       verify, middleware, clock guard
-server/app/geo.py           areas, haversine, map clusters
-server/app/alerts.py        SPIKE / NEW_TYPE
-server/app/data/*.json      reference data from the brief's appendix
-server/tests/               pytest per module
-tools/                      make_license.py, keygen.py, scenarios.py, replay_logs.py
-server/web/                 the website (served by FastAPI at "/"; inside server/ so Render redeploys on change)
+CLAUDE.md, PROGRESS.md      rules for Claude / the plan + status + done log
+render.yaml                 Render settings (we deploy by hand, free plan)
+docs/                       00-prd (source of truth) ... 11; design/stitch = Stitch screenshots
+server/                     everything Render runs (its root dir), so a push here redeploys
+  app/main.py               FastAPI app, routes wired here
+  app/normalize.py          identifier parsing + validation (pure functions)
+  app/reference.py          loads app/data/*.json (areas, verified list, scam types, channels)
+  app/db.py                 tables + engine (SQLite dev.db locally, Neon Postgres on Render)
+  app/reports.py            POST /reports: validate, rate limit (429), save
+  app/trust.py              trust rules L1-L5 (pure); assessment.py runs them on stored reports
+  app/lookup.py             GET /lookup verdict + masking
+  app/geo.py, alerts.py     GET /map clusters, GET /alerts SPIKE / NEW_TYPE
+  app/challenges.py         POST /challenges (disputes)
+  app/stats.py              GET /stats for the dashboard
+  app/privacy.py            hashing, masking, safe logging
+  app/license.py            licence verify, middleware, clock guard, GET/POST /license
+  app/timeutil.py           UTC inside, IST (+05:30) in replies
+  web/                      the website (index.html, app.js, i18n.js, icons.js, app.css), served at "/"
+  tests/                    pytest per module (+ licence_testkit.py: throwaway test key)
+tools/                      scenarios.py (attack + real-scam checks), keygen / make / upload / preload licence
+tools/samples/              demo_examples.txt (copy-paste examples for /docs)
+licenses/        (ignored)  long.json, short.json: signed licence files (never the private key)
+_local/          (ignored)  laptop-only files, e.g. raw Stitch exports
+private.key      (ignored)  only on Sanjay's laptop; never in the repo

@@ -2,7 +2,10 @@
 private.key
 *.pem
 .env
+# signed licence files (long.json, short.json) live in licenses/
 licenses/
+# a licence file dropped in the project root by mistake is never committed
+/*.json
 # local data
 dev.db
 scenarios.db
@@ -17,5 +20,6 @@ node_modules/
 dist/
 .neon
 .env.local
-# raw Google Stitch exports (screenshots kept in docs/design/stitch)
+# laptop-only files: raw Google Stitch exports, scratch notes (screenshots we use are in docs/design/stitch)
+_local/
 stitch_scam_map_india_web_app*/

@@ -69,7 +69,10 @@ def lookup(id_type: str, value: str) -> dict:
         verdict = "SUSPICIOUS"
 
     # 4) Show the full value only for verified businesses or 3+ independent trusted people.
-    show_full = verified is not None or result["trusted_sources"] >= trust.KNOWN_SCAM_MIN_SOURCES
+    #    A disputed number stays hidden while it is under review: if the business is right, we
+    #    must not have its real number on screen next to "reported" (privacy first, docs/04).
+    enough_people = result["trusted_sources"] >= trust.KNOWN_SCAM_MIN_SOURCES
+    show_full = verified is not None or (enough_people and not challenged)
     display_value = value if show_full else mask(id_type, value)
 
     # 5) Most common scam type, and evidence WITHOUT who/IP/note (privacy rule).

@@ -46,7 +46,10 @@ refresh_all_trusted_flags()
 
 # Neon's free database falls asleep after ~5 idle minutes, and waking it takes up to a second,
 # which would blow our 0.5 s lookup budget. A tiny query every 4 minutes keeps it awake.
+# But an always-awake database uses up Neon's free monthly compute hours, so the ping is OFF by
+# default and switched on only around judging day: set KEEP_DB_AWAKE=1 on Render.
 KEEPALIVE_SECONDS = 240
+KEEP_DB_AWAKE = os.environ.get("KEEP_DB_AWAKE") == "1"
 
 
 async def _keep_db_awake() -> None:
@@ -62,7 +65,7 @@ async def _keep_db_awake() -> None:
 @contextlib.asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Start the keep-alive task when the server starts; stop it when the server stops."""
-    task = asyncio.create_task(_keep_db_awake()) if db.is_postgres() else None
+    task = asyncio.create_task(_keep_db_awake()) if db.is_postgres() and KEEP_DB_AWAKE else None
     yield
     if task:
         task.cancel()

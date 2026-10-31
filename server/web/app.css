@@ -157,7 +157,16 @@ a.chip { text-decoration: none; }
 .tiles.small .tile { min-height: 78px; font-size: 13px; }
 .tiles.small .tile .ico { width: 22px; height: 22px; }
 
+/* Type tabs (Phone / UPI ID / Link / SMS sender): picked first on Check, Report and Dispute. */
+.segmented { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--sunk); padding: 4px; border-radius: 12px; }
+.seg { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 58px; padding: 6px 4px;
+  border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: 600 13.5px/1.2 var(--sans); cursor: pointer; text-align: center; }
+.seg .ico { width: 20px; height: 20px; }
+.seg.on { background: var(--card); color: var(--sage-dark); box-shadow: 0 1px 3px rgba(34, 48, 42, .14); }
+.seg.on .ico { color: var(--sage); }
+
 /* ---------------------------------------------------------------- report form steps */
+.report-page { max-width: 720px; margin: 0 auto; }
 .step { margin-top: 22px; }
 .step-title { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .step-num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sage); color: #fff; font-weight: 700; font-size: 14px; }
@@ -188,6 +197,20 @@ details.more .more-body { padding: 0 16px 16px; }
 .result.susp { border-left-color: var(--amber); } .result.susp .result-head { background: var(--amber-tint); } .result.susp .badge-ico { color: #A86F0C; }
 .result.verified { border-left-color: var(--green); } .result.verified .result-head { background: var(--green-tint); } .result.verified .badge-ico { color: var(--green); }
 .result-body { padding: 14px 16px 16px; }
+.verdict-label { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 6px; background: var(--card); color: var(--grey); margin-bottom: 4px; }
+.result.known .verdict-label { color: var(--red); } .result.susp .verdict-label { color: #A86F0C; }
+.result.verified .verdict-label { color: var(--green); }
+.value-box .small { display: block; margin-top: 2px; }
+.dispute-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 14.5px; font-weight: 600; }
+.dispute-link .ico { width: 18px; height: 18px; }
+.dispute-card { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line);
+  border-left: 4px solid var(--gold); border-radius: var(--radius); padding: 14px 16px; text-decoration: none; color: var(--ink); }
+.dispute-card .ico-wrap { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--gold-tint); color: var(--gold-dark); flex: none; }
+.dispute-card b { display: block; }
+.dispute-card > .ico:last-child { margin-left: auto; color: var(--muted); }
+.menu-text { display: flex; flex-direction: column; }
+.menu-text .small { font-weight: 400; }
 .value-box { background: var(--sunk); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
 .value-box small { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .value-box b { font-size: 20px; letter-spacing: .02em; word-break: break-all; }
@@ -217,7 +240,9 @@ details.more .more-body { padding: 0 16px 16px; }
 .scam-card span { font-size: 14.5px; color: var(--muted); }
 
 /* ---------------------------------------------------------------- map */
-.map-shell { position: relative; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--sunk); }
+/* `isolation: isolate` keeps Leaflet's own layers (z-index 400-1000) inside the map box, so the
+   map can no longer slide over the sticky top bar when you scroll. */
+.map-shell { position: relative; isolation: isolate; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--sunk); }
 #mapbox { height: 58vh; min-height: 360px; }
 .map-legend { position: absolute; left: 10px; bottom: 10px; z-index: 500; background: var(--card); border: 1px solid var(--line);
   border-radius: 10px; padding: 8px 10px; font-size: 13px; }
@@ -329,6 +354,11 @@ details.scam .body { padding: 0 14px 14px 66px; }
   .sticky { position: sticky; top: 84px; }
   .narrow { max-width: 680px; }
 }
+/* Laptops between 900 and 1100 px: drop "How it works" from the top bar (it's in the footer) so it fits. */
+@media (min-width: 900px) and (max-width: 1099px) {
+  .topnav .nav-wide { display: none; }
+  .topnav a { padding: 8px 9px; }
+}
 @media (max-width: 899px) {
   .grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 }
@@ -336,3 +366,6 @@ details.scam .body { padding: 0 14px 14px 66px; }
   .tiles { grid-template-columns: repeat(2, 1fr); }
   .grid3 { grid-template-columns: 1fr 1fr; }
 }
+aside.card.flat .points { grid-template-columns: 1fr; }
+/* A button that looks like a link (e.g. "Change" next to the detected type on the Report page). */
+.linkbtn { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--sage-dark); text-decoration: underline; cursor: pointer; }

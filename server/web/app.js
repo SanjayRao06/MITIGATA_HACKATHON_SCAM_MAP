@@ -47,10 +47,16 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleString(S.lang === "hi" ? "hi-IN" : "en-IN",
     { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
 }
-/** A time `hoursAgo` hours before now, in the PRD's format: 2026-10-31T14:00:00+05:30. */
-function istIso(hoursAgo = 0) {
-  const ms = Date.now() - hoursAgo * 3600e3 + 5.5 * 3600e3;
-  return new Date(ms).toISOString().slice(0, 19) + "+05:30";
+/** A Date in the PRD's time format, in India time: 2026-10-31T14:00:00+05:30. */
+function toIstIso(date) {
+  return new Date(date.getTime() + 5.5 * 3600e3).toISOString().slice(0, 19) + "+05:30";
+}
+/** A time `hoursAgo` hours before now, in the PRD's format. */
+function istIso(hoursAgo = 0) { return toIstIso(new Date(Date.now() - hoursAgo * 3600e3)); }
+/** A Date as the "YYYY-MM-DDTHH:MM" text a datetime-local box uses (in this device's time zone). */
+function localInputValue(date) {
+  const d = new Date(date.getTime() - date.getTimezoneOffset() * 60e3);
+  return d.toISOString().slice(0, 16);
 }
 function randomId(prefix) {
   const r = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2) + Date.now().toString(16));
@@ -180,6 +186,56 @@ function detectType(value) {
 }
 const TYPES = ["phone", "upi", "url", "sender_id"];
 
+/* How the input box looks for each identifier type: example text, phone keyboard, icon. */
+const TYPE_INPUT = {
+  phone: { ph: "+91 98765 43210", mode: "tel", icon: "phone" },
+  upi: { ph: "name@okaxis", mode: "email", icon: "rupee" },
+  url: { ph: "https://sbi-kyc.in/pay", mode: "url", icon: "link" },
+  sender_id: { ph: "VM-HDFCBK", mode: "text", icon: "message" },
+};
+
+/** The four type tabs (Phone / UPI ID / Link / SMS sender) used on Check, Report and Dispute. */
+function typeTabs(id, chosen) {
+  return `<div class="segmented" id="${id}" role="radiogroup">${TYPES.map((k) => `
+    <button type="button" role="radio" class="seg ${k === chosen ? "on" : ""}" data-v="${k}" aria-checked="${k === chosen}">
+      ${icon(TYPE_INPUT[k].icon)}<span>${t("type_" + k)}</span></button>`).join("")}</div>`;
+}
+
+/**
+ * Wire up type tabs + their input box. The user picks the type first; the box then shows the
+ * right example and phone keyboard. If they paste something that is clearly another type
+ * (e.g. an "@" UPI ID while "Phone" is picked) we switch the tab for them and say so.
+ * Returns {type, touched, set(type)}: the current type, whether the user chose it themselves,
+ * and a way for the page to change it (Report pre-picks the type from the channel).
+ */
+function bindTypeInput(tabsSel, inputSel, hintSel, startType, onChange = () => {}) {
+  const st = { type: startType, touched: false };
+  const input = $(inputSel);
+  const apply = (type) => {
+    st.type = type;
+    $$(`${tabsSel} [data-v]`).forEach((b) => { b.classList.toggle("on", b.dataset.v === type); b.setAttribute("aria-checked", b.dataset.v === type); });
+    input.placeholder = TYPE_INPUT[type].ph;
+    input.inputMode = TYPE_INPUT[type].mode;
+    $(`${inputSel}-label`) && ($(`${inputSel}-label`).textContent = t("enter_" + type));
+    onChange(type);
+  };
+  $(tabsSel).addEventListener("click", (e) => {
+    const b = e.target.closest("[data-v]"); if (!b) return;
+    st.touched = true; apply(b.dataset.v); $(hintSel).textContent = ""; input.focus();
+  });
+  input.addEventListener("input", () => {
+    st.touched = true;
+    const d = detectType(input.value);
+    // Only switch for clear cases: a phone tab with letters/@ in the box, or digits-only in another tab.
+    if (d && d !== st.type && (d !== "sender_id" || st.type === "phone")) {
+      apply(d); $(hintSel).textContent = t("switched", { type: t("type_" + d) });
+    }
+  });
+  apply(startType);
+  st.set = apply;
+  return st;
+}
+
 /* ================================================================ HOME */
 async function pageHome() {
   view().innerHTML = `
@@ -216,7 +272,12 @@ async function pageHome() {
         </div>
         <a href="#/guide" class="small" style="display:inline-block;margin-top:10px">${t("home_guide_cta")} →</a>
       </div>
-    </div>`;
+    </div>
+    <a class="section dispute-card" href="#/dispute">
+      <span class="ico-wrap">${icon("scale")}</span>
+      <span><b>${t("home_dispute_title")}</b><span class="muted small">${t("home_dispute_sub")}</span></span>
+      ${icon("chevronRight")}
+    </a>`;
   $("#quick").addEventListener("submit", (e) => {
     e.preventDefault();
     const v = e.target.v.value.trim();
@@ -243,7 +304,8 @@ async function pageHome() {
 
 /* ================================================================ CHECK */
 function pageCheck(params) {
-  const chosen = TYPES.includes(params.type) ? params.type : "auto";
+  // Start on the type from the link, else guess it from a value passed in (home search box), else Phone.
+  const start = TYPES.includes(params.type) ? params.type : (detectType(params.value) || "phone");
   view().innerHTML = `
     <div class="split">
       <section>
@@ -251,13 +313,12 @@ function pageCheck(params) {
         <h1>${t("check_title")}</h1>
         <p class="lead">${t("check_sub")}</p>
         <form id="checkForm" class="card" style="margin-top:14px" novalidate>
-          <label class="lbl" for="cv">${t("paste_placeholder")}</label>
+          <label class="lbl">${t("q_kind")}</label>
+          ${typeTabs("ctypes", start)}
+          <label class="lbl" for="cv" id="cv-label" style="margin-top:14px"></label>
           <div class="field">${icon("search")}
-            <input id="cv" name="v" autocomplete="off" inputmode="text" value="${esc(params.value || "")}" placeholder="+91 98765 43210">
+            <input id="cv" name="v" autocomplete="off" value="${esc(params.value || "")}">
             <button type="button" class="clear" aria-label="Clear" id="cclear">${icon("x")}</button>
-          </div>
-          <div class="chips" style="margin-top:10px" id="ctypes">
-            ${["auto", ...TYPES].map((k) => `<button type="button" class="chip ${k === chosen ? "on" : ""}" data-type="${k}">${t("type_" + k)}</button>`).join("")}
           </div>
           <p class="hint" id="cdetect"></p>
           <button class="btn btn-block" style="margin-top:12px" type="submit">${icon("search")} ${t("check_btn")}</button>
@@ -267,59 +328,65 @@ function pageCheck(params) {
       <section id="cresult" aria-live="polite"></section>
     </div>`;
 
-  let type = chosen;
   const input = $("#cv");
-  const showDetect = () => {
-    const d = detectType(input.value);
-    $("#cdetect").textContent = type === "auto" && d ? t("detected", { type: t("type_" + d) }) : "";
-  };
-  $("#ctypes").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-type]"); if (!b) return;
-    type = b.dataset.type;
-    $$("#ctypes .chip").forEach((c) => c.classList.toggle("on", c === b));
-    showDetect();
-  });
-  input.addEventListener("input", showDetect);
-  $("#cclear").addEventListener("click", () => { input.value = ""; input.focus(); showDetect(); $("#cresult").innerHTML = ""; });
+  const picked = bindTypeInput("#ctypes", "#cv", "#cdetect", start, () => { $("#cerr").innerHTML = ""; });
+  $("#cclear").addEventListener("click", () => { input.value = ""; input.focus(); $("#cdetect").textContent = ""; $("#cresult").innerHTML = ""; });
   $("#checkForm").addEventListener("submit", (e) => { e.preventDefault(); runCheck(); });
 
   async function runCheck() {
     const value = input.value.trim();
-    const realType = type === "auto" ? detectType(value) : type;
     $("#cerr").innerHTML = "";
-    if (!value || !realType) { $("#cerr").innerHTML = errorBox(t("required_value")); return; }
+    if (!value) { $("#cerr").innerHTML = errorBox(t("required_" + picked.type)); return; }
     $("#cresult").innerHTML = `<div class="skeleton" style="min-height:220px"></div>`;
     try {
-      const r = await api(`/lookup?type=${realType}&value=${encodeURIComponent(value)}`);
-      $("#cresult").innerHTML = resultCard(r, value, realType);
+      const [r] = await Promise.all([api(`/lookup?type=${picked.type}&value=${encodeURIComponent(value)}`), safeMeta()]);
+      $("#cresult").innerHTML = resultCard(r, value, picked.type);
+      if (window.innerWidth < 900) $("#cresult").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
       $("#cresult").innerHTML = "";
-      $("#cerr").innerHTML = errorBox(err.status === 400 ? t("err_check") : errMessage(err));
+      $("#cerr").innerHTML = errorBox(err.status === 400 ? t("err_" + picked.type) : errMessage(err));
     }
   }
-  showDetect();
   if (params.value) runCheck();
+}
+
+/** The user's own area (saved on this device when they report or use "my location"), or null. */
+function myArea() {
+  const pin = storeGet("sm_area");
+  return (pin && S.meta?.areas.find((a) => a.pincode === pin)) || null;
 }
 
 /** The coloured result card for one /lookup reply. */
 function resultCard(r, typed, idType) {
   const cls = { KNOWN_SCAM: "known", SUSPICIOUS: "susp", NO_REPORTS: "none", VERIFIED_BUSINESS: "verified" }[r.verdict];
   const headIcon = { known: "alert", susp: "alertCircle", none: "info", verified: "shieldCheck" }[cls];
+  // "Reported by 7 people" ([PRD §3] example). People = different people AFTER the trust rules.
+  const people = r.distinct_reporters || 0;
+  const reportedBy = t(people === 1 ? "v_by_one" : "v_by_many", { n: fmtNum(people) });
+
+  // "Near you": areas in the evidence within 10 km of the user's own saved area (device only).
+  const mine = myArea();
+  const areaOf = (pin) => S.meta?.areas.find((a) => a.pincode === pin);
+  const evAreas = [...new Set((r.evidence || []).map((ev) => ev.pincode))].map(areaOf).filter(Boolean);
+  const near = mine ? evAreas.filter((a) => haversineKm(mine, a) <= 10) : [];
+
   let title, sub;
-  if (r.verdict === "KNOWN_SCAM") { title = t("v_known", { n: fmtNum(r.distinct_reporters) }); sub = t("v_known_sub"); }
-  else if (r.verdict === "SUSPICIOUS") { title = t("v_susp"); sub = r.masked ? t("v_susp_sub") : ""; }
+  if (r.verdict === "KNOWN_SCAM") { title = near.length ? t("v_known_near", { n: fmtNum(people) }) : reportedBy; sub = t("v_known_sub"); }
+  else if (r.verdict === "SUSPICIOUS") { title = reportedBy + " " + t("v_susp_tail"); sub = r.masked ? t("v_susp_sub") : ""; }
   else if (r.verdict === "VERIFIED_BUSINESS") {
     title = t("v_verified");
     sub = (r.message || "").split(":").slice(1).join(":").trim();   // "Verified business: HDFC Bank ..."
   } else { title = t("v_none"); sub = t("v_none_sub"); }
 
-  const areas = [...new Set((r.evidence || []).map((ev) => S.meta?.areas.find((a) => a.pincode === ev.pincode)?.locality || ev.pincode))];
   const facts = r.report_count ? `
     <dl class="facts">
       <dt>${t("r_last")}</dt><dd>${esc(fmtDate(r.last_seen))}</dd>
+      <dt>${t("r_first")}</dt><dd>${esc(fmtDate(r.first_seen))}</dd>
       ${r.scam_type ? `<dt>${t("r_type")}</dt><dd>${esc(scamName(r.scam_type))}</dd>` : ""}
+      <dt>${t("r_people")}</dt><dd>${fmtNum(people)}</dd>
       <dt>${t("r_reports")}</dt><dd>${fmtNum(r.report_count)}</dd>
-      ${areas.length ? `<dt>${t("r_areas")}</dt><dd>${esc(areas.slice(0, 3).join(", "))}</dd>` : ""}
+      ${near.length ? `<dt>${t("r_near", { area: esc(mine.locality) })}</dt><dd>${esc(near.slice(0, 3).map((a) => a.locality).join(", "))}</dd>`
+        : evAreas.length ? `<dt>${t("r_areas")}</dt><dd>${esc(evAreas.slice(0, 3).map((a) => a.locality).join(", "))}</dd>` : ""}
     </dl>` : "";
   const advice = r.verdict === "VERIFIED_BUSINESS" ? "" : `
     <div class="advice">${icon("shieldCheck")}<div><b>${t("advice_title")}</b>${esc(scamAdvice(r.scam_type || "otp-call"))}</div></div>`;
@@ -337,110 +404,151 @@ function resultCard(r, typed, idType) {
   return `
     <div class="result ${cls}">
       <div class="result-head"><span class="badge-ico">${icon(headIcon)}</span>
-        <div><h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ""}</div></div>
+        <div><span class="verdict-label">${t("verdict_" + r.verdict)}</span>
+          <h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ""}</div></div>
       <div class="result-body">
         ${r.challenged ? `<div class="underreview">${icon("scale")} ${t("v_challenged")}</div>` : ""}
-        <div class="value-box"><small>${t("r_value")}</small><b>${esc(r.display_value)}</b></div>
+        <div class="value-box"><small>${t("r_value_" + idType)}</small><b>${esc(r.display_value)}</b>
+          ${r.masked ? `<span class="small muted">${t(r.challenged ? "r_hidden_review" : "r_hidden")}</span>` : ""}</div>
         ${facts}${advice}
         <div class="btn-row">
           ${r.verdict === "VERIFIED_BUSINESS" ? "" : `<a class="btn btn-quiet btn-sm" href="#/report?value=${encodeURIComponent(typed)}&type=${idType}">${icon("flag")} ${t("report_this")}</a>`}
           <a class="btn btn-danger btn-sm" href="tel:1930">${icon("phone")} ${t("call_1930")}</a>
         </div>
+        ${r.report_count && !r.challenged && r.verdict !== "VERIFIED_BUSINESS" ? `
+          <a class="dispute-link" href="#/dispute?value=${encodeURIComponent(typed)}&type=${idType}">${icon("scale")} ${t("dispute_cta")}</a>` : ""}
       </div>
     </div>${recent}`;
 }
 
 /* ================================================================ REPORT */
+/* Which identifier type each channel usually means, so step 3 starts on the right tab. */
+const CHANNEL_TYPE = { "Phone call": "phone", "SMS or WhatsApp": "phone", "QR code": "upi",
+  "Fake website": "url", "UPI request": "upi" };
+const OTHER_CHANNEL = "Something else";
+/* Short keys for the channel names, used to word step 3 ("q_what_call" = "Their phone number"). */
+const CHANNEL_KEY = { "Phone call": "call", "SMS or WhatsApp": "sms", "QR code": "qr",
+  "Fake website": "web", "UPI request": "upi", "Something else": "other" };
+const EVIDENCE_KINDS = [["screenshot", "camera"], ["screen_rec", "smartphone"], ["call_rec", "headset"]];
+
 async function pageReport(params) {
   const meta = await safeMeta();
   const savedPin = storeGet("sm_area");
   const form = {
     channel: "Phone call", when: "now",
     area: meta?.areas.find((a) => a.pincode === savedPin) || null,
-    scamType: null, type: TYPES.includes(params.type) ? params.type : null,
+    scamType: null, evidence: new Set(),
   };
   const whenHours = { now: 0, today: 3, yesterday: 24 };
+  const startType = TYPES.includes(params.type) ? params.type : (detectType(params.value) || "phone");
   const openedAt = performance.now();   // rehearsal stopwatch: form opened -> report sent (PRD: < 60 s)
+  const now = new Date();
 
   view().innerHTML = `
-    <div class="split">
-      <section class="narrow">
-        <span class="eyebrow">${icon("flag")} ${t("nav_report")}</span>
-        <h1>${t("report_title")}</h1>
-        <p class="note">${icon("lock")}<span>${t("report_sub")}</span></p>
-        <form id="rform" novalidate>
-          <div class="step"><div class="step-title"><span class="step-num">1</span><h2>${t("q_channel")}</h2></div>
-            <div class="tiles" id="rchan" role="radiogroup" aria-label="${t("q_channel")}">
-              ${(meta?.channels || Object.keys(CHANNEL_ICONS)).map((c) => `
-                <button type="button" role="radio" class="tile ${c === form.channel ? "on" : ""}" data-v="${esc(c)}" aria-checked="${c === form.channel}">
-                  ${icon(CHANNEL_ICONS[c] || "dots")}<span>${esc(channelName(c))}</span></button>`).join("")}
-            </div></div>
+    <section class="report-page">
+      <span class="eyebrow">${icon("flag")} ${t("nav_report")}</span>
+      <h1>${t("report_title")}</h1>
+      <p class="note">${icon("lock")}<span>${t("report_sub")}</span></p>
+      <form id="rform" novalidate>
+        <div class="step"><div class="step-title"><span class="step-num">1</span><h2>${t("q_channel")}</h2></div>
+          <div class="tiles" id="rchan" role="radiogroup" aria-label="${t("q_channel")}">
+            ${(meta?.channels || Object.keys(CHANNEL_ICONS)).map((c) => `
+              <button type="button" role="radio" class="tile ${c === form.channel ? "on" : ""}" data-v="${esc(c)}" aria-checked="${c === form.channel}">
+                ${icon(CHANNEL_ICONS[c] || "dots")}<span>${esc(channelName(c))}</span></button>`).join("")}
+          </div>
+          <input class="input" id="rchanother" maxlength="60" placeholder="${t("channel_other_ph")}" aria-label="${t("channel_other_ph")}" style="margin-top:8px" hidden></div>
 
-          <div class="step"><div class="step-title"><span class="step-num">2</span><h2>${t("q_when")}</h2></div>
-            <div class="chips" id="rwhen">${Object.keys(whenHours).map((k) => `
-              <button type="button" class="chip ${k === form.when ? "on" : ""}" data-v="${k}">${t("when_" + k)}</button>`).join("")}</div></div>
+        <div class="step"><div class="step-title"><span class="step-num">2</span><h2>${t("q_when")}</h2></div>
+          <div class="chips" id="rwhen">${[...Object.keys(whenHours), "pick"].map((k) => `
+            <button type="button" class="chip ${k === form.when ? "on" : ""}" data-v="${k}">${k === "pick" ? icon("clock") : ""}${t("when_" + k)}</button>`).join("")}</div>
+          <input class="input" type="datetime-local" id="rwhenat" style="margin-top:8px" hidden
+            max="${localInputValue(now)}" min="${localInputValue(new Date(now - 365 * 864e5))}" value="${localInputValue(now)}" aria-label="${t("when_pick")}">
+          <div id="rwhenerr"></div></div>
 
-          <div class="step"><div class="step-title"><span class="step-num">3</span><h2>${t("q_what")}</h2></div>
-            <p class="hint">${t("q_what_sub")}</p>
-            <div class="field" style="margin-top:8px">${icon("copy")}
-              <input id="rval" autocomplete="off" value="${esc(params.value || "")}" placeholder="+91 98765 43210" aria-label="${t("q_what")}"></div>
-            <div class="chips" style="margin-top:8px" id="rtype"></div>
-            <div id="rvalerr"></div></div>
+        <div class="step"><div class="step-title"><span class="step-num">3</span><h2 id="rwhat"></h2></div>
+          <p class="hint"><span id="rtypenow"></span> · <button type="button" class="linkbtn" id="rtypechange">${t("change")}</button></p>
+          <div style="margin-top:8px" id="rtypewrap" hidden>${typeTabs("rtype", startType)}</div>
+          <div class="field" style="margin-top:10px">${icon("copy")}
+            <input id="rval" autocomplete="off" aria-labelledby="rwhat" value="${esc(params.value || "")}"></div>
+          <p class="hint" id="rtypehint"></p>
+          <div id="rvalerr"></div></div>
 
-          <div class="step"><div class="step-title"><span class="step-num">4</span><h2>${t("q_area")}</h2></div>
-            <p class="hint">${t("q_area_sub")}</p>
-            <div class="combo" style="margin-top:8px">
-              <div class="field">${icon("search")}<input id="rarea" autocomplete="off" placeholder="${t("area_placeholder")}"
-                value="${form.area ? esc(form.area.locality + ", " + form.area.city + " · " + form.area.pincode) : ""}" aria-label="${t("q_area")}"></div>
-              <ul class="combo-list" id="rarealist" hidden></ul>
-            </div>
-            <button type="button" class="btn btn-quiet btn-sm" style="margin-top:8px" id="rloc">${icon("locate")} ${t("use_location")}</button>
-            <p class="hint" id="rlocmsg"></p><div id="rareaerr"></div></div>
+        <div class="step"><div class="step-title"><span class="step-num">4</span><h2>${t("q_area")}</h2></div>
+          <p class="hint">${t("q_area_sub")}</p>
+          <div class="combo" style="margin-top:8px">
+            <div class="field">${icon("search")}<input id="rarea" autocomplete="off" placeholder="${t("area_placeholder")}"
+              value="${form.area ? esc(form.area.locality + ", " + form.area.city + " · " + form.area.pincode) : ""}" aria-label="${t("q_area")}"></div>
+            <ul class="combo-list" id="rarealist" hidden></ul>
+          </div>
+          <button type="button" class="btn btn-quiet btn-sm" style="margin-top:8px" id="rloc">${icon("locate")} ${t("use_location")}</button>
+          <p class="hint" id="rlocmsg"></p><div id="rareaerr"></div></div>
 
-          <details class="more"><summary>${icon("sliders")}<div><b>${t("details_title")}</b><br><span class="muted small">${t("details_sub")}</span></div>${icon("chevronDown")}</summary>
-            <div class="more-body">
-              <label class="lbl">${t("q_type")}</label>
-              <div class="tiles small" id="rscam">${Object.keys(SCAM_TYPE_ICONS).filter((k) => k !== "other").map((k) => `
-                <button type="button" class="tile" data-v="${k}">${icon(SCAM_TYPE_ICONS[k])}<span>${esc(scamName(k))}</span></button>`).join("")}</div>
-              <label class="lbl" for="rnote" style="margin-top:14px">${t("q_note")}</label>
-              <textarea class="input" id="rnote" maxlength="2000" placeholder="${t("note_placeholder")}"></textarea>
-              <label class="lbl" for="ramt" style="margin-top:14px">${t("q_amount")}</label>
-              <input class="input" id="ramt" type="number" min="0" inputmode="numeric" placeholder="0">
-              <label class="toggle" style="margin-top:12px">${icon("camera")}<span style="flex:1">${t("q_screenshot")}</span><input type="checkbox" id="rshot"></label>
-            </div></details>
+        <details class="more"><summary>${icon("sliders")}<div><b>${t("details_title")}</b><br><span class="muted small">${t("details_sub")}</span></div>${icon("chevronDown")}</summary>
+          <div class="more-body">
+            <label class="lbl">${t("q_type")}</label>
+            <div class="tiles small" id="rscam">${Object.keys(SCAM_TYPE_ICONS).map((k) => `
+              <button type="button" class="tile" data-v="${k}">${icon(SCAM_TYPE_ICONS[k])}<span>${esc(scamName(k))}</span></button>`).join("")}</div>
+            <input class="input" id="rscamother" maxlength="60" placeholder="${t("scam_other_ph")}" aria-label="${t("scam_other_ph")}" style="margin-top:8px" hidden>
+            <label class="lbl" for="rnote" style="margin-top:16px">${t("q_note")}</label>
+            <textarea class="input" id="rnote" maxlength="2000" placeholder="${t("note_placeholder")}"></textarea>
+            <label class="lbl" for="ramt" style="margin-top:16px">${t("q_amount")}</label>
+            <input class="input" id="ramt" type="number" min="0" inputmode="numeric" placeholder="0">
+            <label class="lbl" style="margin-top:16px">${t("q_evidence")}</label>
+            <div class="chips" id="revid">${EVIDENCE_KINDS.map(([k, ic]) => `
+              <button type="button" class="chip" data-v="${k}" aria-pressed="false">${icon(ic)} ${t("ev_" + k)}</button>`).join("")}</div>
+            <p class="hint">${icon("lock")} ${t("evidence_note")}</p>
+          </div></details>
 
-          <button class="btn btn-block" style="margin-top:22px" type="submit" id="rsend">${icon("shieldCheck")} ${t("submit_report")}</button>
-          <div id="rerr"></div>
-        </form>
-      </section>
-      <aside class="sticky">
-        <div class="card flat"><h3>${t("advice_title")}</h3>
-          <ul class="list">${["digital-arrest", "otp-call", "upi-refund-qr"].map((k) => `
-            <li>${icon(SCAM_TYPE_ICONS[k])}<div><b>${esc(scamName(k))}</b><br><span class="small muted">${esc(scamAdvice(k))}</span></div></li>`).join("")}</ul>
-        </div>
-      </aside>
-    </div>`;
+        <button class="btn btn-block" style="margin-top:22px" type="submit" id="rsend">${icon("shieldCheck")} ${t("submit_report")}</button>
+        <div id="rerr"></div>
+      </form>
+    </section>`;
 
-  // ---- step 1 + 2: tiles and chips behave like radio buttons
-  pickOne("#rchan", (v) => (form.channel = v));
-  pickOne("#rwhen", (v) => (form.when = v));
-  // optional scam type: tap again to unselect
+  // ---- step 3: type tabs + box. Created first so step 1 can pre-pick the type.
+  const val = $("#rval");
+  // Step 1 already asked HOW they made contact, so step 3 only asks for the value, worded to match
+  // ("Their phone number", "The website link" ...). The type is guessed from what's pasted; the
+  // four type tabs stay hidden behind "Change" for the rare case the guess is wrong.
+  const picked = bindTypeInput("#rtype", "#rval", "#rtypehint", startType, (type) => {
+    $("#rvalerr").innerHTML = "";
+    $("#rtypenow").textContent = t("type_is", { type: t("type_" + type) });
+  });
+  if (params.value || params.type) picked.touched = true;
+  $("#rtypechange").addEventListener("click", () => { $("#rtypewrap").hidden = !$("#rtypewrap").hidden; });
+  const setWhatTitle = () => { $("#rwhat").textContent = t("q_what_" + (CHANNEL_KEY[form.channel] || "other")); };
+  setWhatTitle();
+
+  // ---- step 1: channel tiles. "Something else" opens a short "please say how" box.
+  pickOne("#rchan", (v) => {
+    form.channel = v;
+    setWhatTitle();
+    $("#rchanother").hidden = v !== OTHER_CHANNEL;
+    if (v === OTHER_CHANNEL) $("#rchanother").focus();
+    if (!picked.touched && CHANNEL_TYPE[v]) picked.set(CHANNEL_TYPE[v]);
+  });
+
+  // ---- step 2: quick chips, or "Pick date & time" for an exact time (shown on Check as "Last reported").
+  pickOne("#rwhen", (v) => {
+    form.when = v;
+    $("#rwhenat").hidden = v !== "pick";
+    $("#rwhenerr").innerHTML = "";
+  });
+
+  // ---- optional: scam type (tap again to unselect); "Something else" opens a box.
   $("#rscam").addEventListener("click", (e) => {
     const b = e.target.closest("[data-v]"); if (!b) return;
     form.scamType = form.scamType === b.dataset.v ? null : b.dataset.v;
     $$("#rscam .tile").forEach((x) => x.classList.toggle("on", x.dataset.v === form.scamType));
+    $("#rscamother").hidden = form.scamType !== "other";
+    if (form.scamType === "other") $("#rscamother").focus();
   });
-
-  // ---- step 3: detected type chip (the user can change it)
-  const val = $("#rval");
-  const drawType = () => {
-    const shown = form.type || detectType(val.value);
-    $("#rtype").innerHTML = val.value.trim() ? TYPES.map((k) => `
-      <button type="button" class="chip ${k === shown ? "on" : ""}" data-v="${k}">${k === shown ? icon("check") : ""}${t("type_" + k)}</button>`).join("") : "";
-  };
-  val.addEventListener("input", () => { if (!TYPES.includes(params.type)) form.type = null; drawType(); });
-  $("#rtype").addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (b) { form.type = b.dataset.v; drawType(); } });
-  drawType();
+  // ---- optional: which proof they have (several allowed). Files are NOT uploaded (privacy).
+  $("#revid").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-v]"); if (!b) return;
+    const k = b.dataset.v;
+    form.evidence.has(k) ? form.evidence.delete(k) : form.evidence.add(k);
+    b.classList.toggle("on", form.evidence.has(k)); b.setAttribute("aria-pressed", form.evidence.has(k));
+  });
 
   // ---- step 4: searchable area list + "use my location"
   const areaInput = $("#rarea"), list = $("#rarealist");
@@ -476,53 +584,68 @@ async function pageReport(params) {
     }, () => ($("#rlocmsg").textContent = t("location_failed")), { timeout: 8000, maximumAge: 600000 });
   });
 
+  /** The report's occurred_at: from the quick chip, or the picked date & time (null if invalid). */
+  function occurredAt() {
+    if (form.when !== "pick") return istIso(whenHours[form.when]);
+    const picked = new Date($("#rwhenat").value);
+    if (isNaN(picked) || picked > new Date(Date.now() + 5 * 60e3)) return null;   // empty or in the future
+    return toIstIso(picked);
+  }
+
   // ---- submit
   $("#rform").addEventListener("submit", async (e) => {
     e.preventDefault();
-    $("#rerr").innerHTML = $("#rvalerr").innerHTML = $("#rareaerr").innerHTML = "";
+    $("#rerr").innerHTML = $("#rvalerr").innerHTML = $("#rareaerr").innerHTML = $("#rwhenerr").innerHTML = "";
     const value = val.value.trim();
-    const idType = form.type || detectType(value);
-    if (!value || !idType) { $("#rvalerr").innerHTML = errorBox(t("required_value")); val.focus(); return; }
+    const occurred = occurredAt();
+    if (!occurred) { $("#rwhenerr").innerHTML = errorBox(t("err_when")); $("#rwhenat").focus(); return; }
+    if (!value) { $("#rvalerr").innerHTML = errorBox(t("required_" + picked.type)); val.focus(); return; }
     if (!form.area) { $("#rareaerr").innerHTML = errorBox(t("required_area")); areaInput.focus(); return; }
 
     const body = {
       report_id: randomId("web_"),
-      occurred_at: istIso(whenHours[form.when]),
+      occurred_at: occurred,
       reported_at: istIso(0),
       reporter_id: reporterId(),
       ip_prefix: "web",                       // the server works out the network and hashes it
       channel: form.channel,
-      identifier_type: idType,
+      identifier_type: picked.type,
       identifier_value: value,
       pincode: form.area.pincode, locality: form.area.locality, city: form.area.city,
       note: $("#rnote").value.trim(),
-      has_screenshot: $("#rshot").checked,
+      has_screenshot: form.evidence.size > 0, // any proof (screenshot / recording) counts for the trust rules
       amount_lost_inr: Math.max(0, Number($("#ramt").value) || 0),
     };
     if (form.scamType) body.scam_type = form.scamType;
+    if (form.channel === OTHER_CHANNEL && $("#rchanother").value.trim()) body.channel_other = $("#rchanother").value.trim();
+    if (form.scamType === "other" && $("#rscamother").value.trim()) body.scam_type_other = $("#rscamother").value.trim();
 
     const btn = $("#rsend"); btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> ${t("sending")}`;
     try {
       await api("/reports", body);
       console.info(`[stopwatch] report sent in ${((performance.now() - openedAt) / 1000).toFixed(1)} s`);
-      reportSuccess(value, idType);
+      reportSuccess(value, picked.type, form.scamType);
     } catch (err) {
       btn.disabled = false; btn.innerHTML = `${icon("shieldCheck")} ${t("submit_report")}`;
       const msg = err.body?.error || "";
-      if (err.status === 400 && msg.includes("identifier")) $("#rvalerr").innerHTML = errorBox(t("err_identifier"));
+      if (err.status === 400 && msg.includes("identifier")) $("#rvalerr").innerHTML = errorBox(t("err_" + picked.type));
       else if (err.status === 400 && msg.includes("pincode")) $("#rareaerr").innerHTML = errorBox(t("err_area"));
+      else if (err.status === 400 && msg.includes("occurred_at")) $("#rwhenerr").innerHTML = errorBox(t("err_when"));
       else if (err.status === 429) $("#rerr").innerHTML = errorBox(t("err_rate"));
       else $("#rerr").innerHTML = errorBox(errMessage(err));
     }
   });
 }
 
-function reportSuccess(value, idType) {
+/** "Thanks" screen, with the safety advice for the scam type they picked (or general advice). */
+function reportSuccess(value, idType, scamType) {
+  const k = scamType && scamType !== "other" ? scamType : null;
   view().innerHTML = `
     <section class="success card narrow" style="margin:0 auto">
       <span class="big-ico">${icon("checkCircle")}</span>
       <h1>${t("ok_title")}</h1>
       <p class="lead" style="margin:0 auto 18px">${t("ok_sub")}</p>
+      <div class="advice" style="text-align:left">${icon("shieldCheck")}<div><b>${t("advice_title")}</b>${esc(scamAdvice(k || "otp-call"))}</div></div>
       <div class="btn-row">
         <a class="btn" href="#/check?value=${encodeURIComponent(value)}&type=${idType}">${icon("search")} ${t("ok_check")}</a>
         <a class="btn btn-quiet" href="#/report">${icon("flag")} ${t("ok_another")}</a>
@@ -564,9 +687,10 @@ async function pageMap() {
     <span class="eyebrow">${icon("mapPin")} ${t("nav_map")}</span>
     <h1>${t("map_title")}</h1>
     <p class="note">${icon("shield")}<span>${t("map_sub")}</span></p>
+    <p class="note">${icon("clock")}<span>${t("map_window")}</span></p>
     <div id="mapAlerts" style="margin-top:12px"></div>
     <div class="chips scroll" style="margin:12px 0" id="mrange">
-      ${[7, 1, 30].map((d) => `<button type="button" class="chip ${d === 7 ? "on" : ""}" data-v="${d}">${icon("clock")} ${t("range_" + d)}</button>`).join("")}
+      ${[7, 1].map((d) => `<button type="button" class="chip ${d === 7 ? "on" : ""}" data-v="${d}">${icon("clock")} ${t("range_" + d)}</button>`).join("")}
     </div>
     <div class="chips scroll" style="margin-bottom:12px" id="mcity"></div>
     <div class="split map">
@@ -753,7 +877,8 @@ function pageHow() {
 }
 
 /* ================================================================ BUSINESS DISPUTE */
-function pageDispute() {
+function pageDispute(params) {
+  const start = TYPES.includes(params.type) ? params.type : (detectType(params.value) || "phone");
   view().innerHTML = `
     <div class="split">
       <section class="narrow">
@@ -761,10 +886,11 @@ function pageDispute() {
         <h1>${t("dispute_title")}</h1>
         <p class="lead">${t("dispute_sub")}</p>
         <form id="dform" class="card" style="margin-top:14px" novalidate>
-          <label class="lbl" for="dtype">${t("f_type")}</label>
-          <select class="input" id="dtype">${TYPES.map((k) => `<option value="${k}">${t("type_" + k)}</option>`).join("")}</select>
-          <label class="lbl" for="dval" style="margin-top:12px">${t("f_value")}</label>
-          <input class="input" id="dval" autocomplete="off" placeholder="+91 80 4100 2233">
+          <label class="lbl">${t("q_kind")}</label>
+          ${typeTabs("dtype", start)}
+          <label class="lbl" for="dval" id="dval-label" style="margin-top:12px"></label>
+          <div class="field">${icon("copy")}<input id="dval" autocomplete="off" value="${esc(params.value || "")}"></div>
+          <p class="hint" id="dtypehint"></p>
           <label class="lbl" for="dname" style="margin-top:12px">${t("f_name")}</label>
           <input class="input" id="dname" autocomplete="organization">
           <label class="lbl" for="demail" style="margin-top:12px">${t("f_email")}</label>
@@ -776,12 +902,17 @@ function pageDispute() {
           <p class="note" style="margin-top:12px">${icon("lock")}<span>${t("dispute_note")}</span></p>
         </form>
       </section>
+      <aside class="card flat">
+        <h3>${t("dispute_how_title")}</h3>
+        <ul class="points">${[["scale", 1], ["eyeOff", 2], ["shieldCheck", 3]].map(([ic, n]) => `
+          <li>${icon(ic)}<div>${t("dispute_how_" + n)}</div></li>`).join("")}</ul>
+      </aside>
     </div>`;
-  $("#dval").addEventListener("input", (e) => { const d = detectType(e.target.value); if (d) $("#dtype").value = d; });
+  const picked = bindTypeInput("#dtype", "#dval", "#dtypehint", start);
   $("#dform").addEventListener("submit", async (e) => {
     e.preventDefault();
     const body = {
-      identifier_type: $("#dtype").value, identifier_value: $("#dval").value.trim(),
+      identifier_type: picked.type, identifier_value: $("#dval").value.trim(),
       claimant_name: $("#dname").value.trim(), contact_email: $("#demail").value.trim(), proof_note: $("#dproof").value.trim(),
     };
     $("#derr").innerHTML = "";
@@ -808,8 +939,8 @@ function pageMore() {
   view().innerHTML = `
     <h1>${t("more_title")}</h1>
     <nav class="menu" style="margin-top:12px">
-      ${[["dashboard", "barChart"], ["guide", "book"], ["how", "info"], ["dispute", "scale"]].map(([r, ic]) => `
-        <a href="#/${r}">${icon(ic)} ${t("nav_" + r)} ${icon("chevronRight")}</a>`).join("")}
+      ${[["dispute", "scale"], ["dashboard", "barChart"], ["guide", "book"], ["how", "info"]].map(([r, ic]) => `
+        <a href="#/${r}">${icon(ic)}<span class="menu-text"><b>${t("nav_" + r)}</b><span class="small muted">${t("more_" + r)}</span></span>${icon("chevronRight")}</a>`).join("")}
       <a href="https://cybercrime.gov.in" target="_blank" rel="noopener">${icon("external")} cybercrime.gov.in ${icon("chevronRight")}</a>
     </nav>`;
 }

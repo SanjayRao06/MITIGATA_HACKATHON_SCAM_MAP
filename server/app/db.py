@@ -52,6 +52,10 @@ reports = Table(
     # Set by the trust engine: True for ONE report per independent, trusted source. /map and
     # /alerts count only these, so fake waves never show up on the map or fire alerts.
     Column("trusted", Boolean, nullable=False, default=False),
+    # The reporter's own words when they picked "Something else" as the channel or scam type
+    # (e.g. "Telegram", "fake rent deposit"). Kept for reviewers only; never returned or logged.
+    Column("channel_other", String(60), nullable=True),
+    Column("scam_type_other", String(60), nullable=True),
 )
 Index("ix_reports_identifier", reports.c.identifier_id)
 Index("ix_reports_reporter", reports.c.reporter_hash)
@@ -134,6 +138,9 @@ def init_db() -> None:
         existing = {c["name"] for c in inspect(conn).get_columns("reports")}
         if "trusted" not in existing:
             conn.execute(text("ALTER TABLE reports ADD COLUMN trusted BOOLEAN NOT NULL DEFAULT FALSE"))
+        for column in ("channel_other", "scam_type_other"):
+            if column not in existing:
+                conn.execute(text(f"ALTER TABLE reports ADD COLUMN {column} VARCHAR(60)"))
 
 
 def is_postgres() -> bool:

@@ -117,3 +117,27 @@ def test_reset_clears_disputes():
     client.post("/challenges", json=challenge())
     client.post("/admin/reset")
     assert look("9876543210")["challenged"] is False
+
+
+def test_disputed_number_is_hidden_again():
+    """While under review the number is masked, even with 3+ trusted people (privacy first)."""
+    make_known_scam()
+    assert look("9876543210")["display_value"] == "+919876543210"
+    client.post("/challenges", json=challenge())
+    body = look("9876543210")
+    assert body["display_value"] == "98XXXXX210" and body["masked"] is True
+
+
+def test_something_else_texts_are_stored_but_never_returned():
+    """channel_other / scam_type_other (website's "Something else" boxes) are kept, never shown."""
+    from sqlalchemy import select
+    from app.db import engine, reports
+    r = client.post("/reports", json={
+        "occurred_at": ts(1), "reporter_id": "r_other", "ip_prefix": "10.9.9", "channel": "Something else",
+        "channel_other": "  Telegram  ", "scam_type": "other", "scam_type_other": "fake rent deposit " * 10,
+        "identifier_type": "phone", "identifier_value": "9123456780", "pincode": "560102"})
+    assert r.status_code == 201
+    with engine.connect() as conn:
+        row = conn.execute(select(reports.c.channel_other, reports.c.scam_type_other)).first()
+    assert row.channel_other == "Telegram" and len(row.scam_type_other) == 60
+    assert "Telegram" not in client.get("/lookup", params={"type": "phone", "value": "9123456780"}).text
