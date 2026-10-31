@@ -43,6 +43,7 @@ def validate_report(body) -> dict:
 
     # 2) Identifier: known type + a value our normalizer accepts.
     id_type = body.get("identifier_type")
+    id_type = id_type.strip().lower() if isinstance(id_type, str) else id_type  # "Phone" -> "phone"
     if id_type not in IDENTIFIER_TYPES:
         raise ReportError("identifier_type must be one of phone, upi, url, sender_id")
     try:

@@ -111,6 +111,8 @@ def get_lookup(type: str | None = None, value: str | None = None):  # noqa: A002
     Out: 200 with a verdict (never 404, even for unknown numbers), or 400 for impossible values.
     """
     # 1) Both query parameters are required and the type must be one of the four.
+    #    Ignore capitals/spaces ("Phone", " phone") - being strict here only loses real lookups.
+    type = (type or "").strip().lower()
     if type not in IDENTIFIER_TYPES:
         return bad_request("type must be one of phone, upi, url, sender_id")
     if not value:

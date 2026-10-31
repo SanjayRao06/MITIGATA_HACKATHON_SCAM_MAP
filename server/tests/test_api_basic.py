@@ -108,6 +108,12 @@ def test_unknown_number_is_no_reports_not_404():
     assert r.json()["report_count"] == 0
 
 
+def test_type_ignores_case_and_spaces():
+    assert client.get("/lookup?type=Phone&value=1800%201600").json()["verdict"] == "VERIFIED_BUSINESS"
+    assert client.get("/lookup?type=%20PHONE%20&value=1800%201600").json()["verdict"] == "VERIFIED_BUSINESS"
+    assert client.post("/reports", json=report(identifier_type="Phone")).status_code == 201
+
+
 def test_impossible_lookup_value_is_400():
     assert look("phone", "12345").status_code == 400
     assert client.get("/lookup?type=phone").status_code == 400
