@@ -8,9 +8,8 @@ Later steps add /map, /alerts, /challenges and /license (see docs/08-implementat
 
 import asyncio
 import contextlib
-import json
 
-from fastapi import FastAPI, Request
+from fastapi import Body, FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -82,25 +81,42 @@ def health() -> dict:
     return {"ok": True}
 
 
+# Example shown (and editable) in the /docs page, copied from [PRD §A.2].
+REPORT_EXAMPLE = {
+    "report_id": "rep_000123",
+    "occurred_at": "2026-10-31T14:00:00+05:30",
+    "reported_at": "2026-10-31T14:10:00+05:30",
+    "reporter_id": "r_7c2d91aa",
+    "ip_prefix": "103.21.58",
+    "channel": "Phone call",
+    "scam_type": "digital-arrest",
+    "identifier_type": "phone",
+    "identifier_value": "+91 98765 43210",
+    "pincode": "560102",
+    "locality": "HSR Layout",
+    "city": "Bengaluru",
+    "note": "Video call from a man in police uniform...",
+    "has_screenshot": False,
+    "amount_lost_inr": 0,
+}
+
+
 @app.post("/reports", status_code=201)
-async def post_report(request: Request):
+async def post_report(body: dict = Body(..., openapi_examples={
+        "report": {"summary": "A phone scam report", "value": REPORT_EXAMPLE}})):
     """Receive one scam report ([PRD §A.2]).
 
     In: report JSON. Out: 201 {report_id, case_id, merged}, or 400 {"error"} for junk.
+    `body: dict` tells FastAPI (and the /docs page) to expect a JSON object. Broken JSON or a
+    non-object becomes a 400 via validation_error_to_400. All field checks happen in validate_report().
     """
-    # 1) Read the JSON ourselves so broken JSON is a clean 400, not a crash.
-    try:
-        body = await request.json()
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return bad_request("body must be valid JSON")
-
-    # 2) Validate (normalizer, pincode, times, reporter fields).
+    # 1) Validate (normalizer, pincode, times, reporter fields).
     try:
         clean = validate_report(body)
     except ReportError as exc:
         return bad_request(str(exc))
 
-    # 3) Save it. The database work runs in a worker thread so the server stays responsive.
+    # 2) Save it. The database work runs in a worker thread so the server stays responsive.
     return await run_in_threadpool(save_report, clean)
 
 
