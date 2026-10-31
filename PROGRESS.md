@@ -52,10 +52,10 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 | P0 | Foundation: deploy, normalizer, DB, `/reports`, `/lookup`, `/admin/reset` | row 2, B1 | both | ✅ done & live | — |
 | P1 | Fake reports: scenarios + **trust rules** + 429 rate limit | 20 + 2 | **Avi** | ✅ all trust checks pass (35/42 overall; the 7 left are P3 map/alerts) | — |
 | P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ⬜ | start now |
-| P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ⬜ | next |
-| P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ⬜ | after P3 |
+| P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ✅ 42/42 scenario checks (16/16 random runs) | — |
+| P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ⬜ | next |
 | P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
-| P6 | **Frontend** (Report, Lookup, Map heatmap, Expired screen) + **Hindi + icons** | 15 | **Sanjay** | ⬜ | start after P2 (or in parallel) |
+| P6 | **Frontend** (Report, Lookup, Map heatmap, Expired screen) + **Hindi + icons** | 15 | **San** | ⬜ | start after P2 (or in parallel) |
 | P7 | **Ops**: keep-awake, frontend deploy, live run of all scenarios | protects all | **Sanjay** | ⬜ | UptimeRobot anytime |
 | P8 | **README + video + pitch + rehearsal** | 10 | **both** (split below) | ⬜ | grows as we go; finish last |
 | P9 | Extras: Hindi voice (Sarvam), explain panel, lookalike domains, QR | tie-break | whoever is free | ⬜ | only if time |
@@ -91,14 +91,14 @@ tests must still pass with a valid test licence loaded).
 |---|---|---|---|---|---|
 | 1 | Stops fake reports: bakery ×40, 22 accounts on one Wi-Fi, 1 person ×6, junk → none become "Known scam" | 20 | Test tool | P1 | ✅ all four stopped (15/15 random runs) |
 | 2 | Lookup right answer; all formats match; < 0.5 s | 15 | Test tool | P0 ✅, P1, P5 | ✅ |
-| 3 | Map + alerts: spike → alert, normal → none, new type → alert, month-old not on map | 10 | Test tool | P3 | ❌ |
+| 3 | Map + alerts: spike → alert, normal → none, new type → alert, month-old not on map | 10 | Test tool | P3 | ✅ |
 | 4 | Privacy: < 3 reporters hidden, map never shows a person's location, careful wording. **Reporter identifiable = disqualified** | 15 | Test tool + judge | P0 ✅, P5, P6 | backend ✅ |
 | 5 | Server + licence: 4-step live demo on https, **no restart** | 15 | Judge | P2 | ❌ |
 | 6 | Easy to report: phone + stopwatch < 60 s; works in **Hindi or icons only**; **no login** | 15 | Judge | P6 | ❌ |
 | 7 | Demo + code: runs from README; trust rules + licence explained; pitch | 10 | Judge | P8 | ❌ |
 | B1 | Verified businesses/helplines → "Verified business" | +3 | Test tool | P0 | ✅ |
 | B2 | Dispute feature | +2 | Test tool | P4 | ❌ |
-| B3 | Fake reports never set off an alert | +2 | Test tool | P1 + P3 | ❌ |
+| B3 | Fake reports never set off an alert | +2 | Test tool | P1 + P3 | ✅ |
 **Tie-break:** more bonus points, then **faster report time** (P6 counts twice).
 **Automatic disqualification:** reporter identifiable · exact locations stored · personal data scraped · code written before the event.
 **Judges use secret data** and check for hardcoded values like `if number == "+91..."`.
@@ -156,13 +156,13 @@ tests must still pass with a valid test licence loaded).
 
 ### P3 — Map + alerts (10 pts + 2 bonus) · read docs/06
 **Goal:** correct clusters and alerts from **trusted** reports only.
-- [ ] 3.1 `geo.py`: area lookup, haversine distance, clusters within `radius_km` (default 2), `days` (default 7)
-- [ ] 3.2 `GET /map`: one cluster per area with reports in the window; count, top scam type, severity (≥10 CRIT, ≥5 HIGH, else MED); **lat/lng from Appendix B only**; unknown pincode → 400
-- [ ] 3.3 `alerts.py` **SPIKE:** last 24 h ≥ 5 AND ≥ 2 × (previous 7 days ÷ 7); output `count`, `baseline_per_day`
-- [ ] 3.4 **NEW_TYPE:** a scam type in last 24 h not seen in that area in the 30 days before (decide: need ≥ 2 independent reports; document it)
-- [ ] 3.5 `GET /alerts?pincode=` → `{"alerts": []}` when nothing unusual
-- [ ] 3.6 Only trusted reports count (fakes never cause alerts → +2)
-- [ ] 3.7 Tests: radius cases (2 km = only own area; 4 km adds Bellandur + Koramangala), month-old excluded, spike / steady / new-type
+- [x] 3.1 `geo.py`: area lookup, haversine distance, clusters within `radius_km` (default 2), `days` (default 7)
+- [x] 3.2 `GET /map`: one cluster per area with reports in the window; count, top scam type, severity (≥10 CRIT, ≥5 HIGH, else MED); **lat/lng from Appendix B only**; unknown pincode → 400
+- [x] 3.3 `alerts.py` **SPIKE:** last 24 h ≥ 5 AND ≥ 2 × (previous 7 days ÷ 7); output `count`, `baseline_per_day`
+- [x] 3.4 **NEW_TYPE:** a scam type in last 24 h not seen in that area in the 30 days before (decide: need ≥ 2 independent reports; document it)
+- [x] 3.5 `GET /alerts?pincode=` → `{"alerts": []}` when nothing unusual
+- [x] 3.6 Only trusted reports count (fakes never cause alerts → +2)
+- [x] 3.7 Tests: radius cases (2 km = only own area; 4 km adds Bellandur + Koramangala), month-old excluded, spike / steady / new-type
 **Done when:** all map/alert rows in `scenarios.py` PASS.
 **Judges test:** spike area → SPIKE; steady area → none; new scam type → NEW_TYPE; 30-day-old reports absent from `/map`.
 
@@ -322,6 +322,56 @@ what stops editing the licence date · what if the clock is set back · how is l
 
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
+
+### P3 — Map + alerts — 2026-10-31
+**What was built (simple terms):**
+- `GET /map?pincode=&days=7&radius_km=2`: one cluster per area within the radius that has reports in the
+  last N days. It shows count, most common scam type and severity (CRIT ≥ 10, HIGH ≥ 5, else MED; one level
+  higher for digital-arrest / sextortion / a loss ≥ ₹50,000). The **map point is always the area's point from
+  the brief**, never a reporter's location. With no pincode it lists every area (for the app's city view).
+- `GET /alerts?pincode=`:
+  - **SPIKE:** last 24 h ≥ 5 AND ≥ 2 × the daily average of the 7 days before
+  - **NEW_TYPE:** a scam type in the last 24 h not seen in that area in the 30 days before. One report is enough
+    in an area with recent history; a quiet area waits for a 2nd independent report so the very first report
+    doesn't sound an alarm.
+  - Nothing unusual → `{"alerts": []}`
+- Both count **only trusted reports** (one per independent source from the P1 trust rules), so fake
+  waves never move the map or fire alerts (+2 bonus).
+- At start-up the server re-checks the `trusted` flag on every stored report, so older data (saved before
+  the flag existed) is counted correctly after a deploy.
+
+**Files touched:**
+- `server/app/geo.py` (new): areas, haversine distance, radius, clusters, severity
+- `server/app/alerts.py` (new): SPIKE + NEW_TYPE per area
+- `server/app/assessment.py`: `refresh_all_trusted_flags()` (start-up re-check)
+- `server/app/main.py`: `/map`, `/alerts` routes + input checks (unknown pincode / bad days / bad radius → 400)
+- `server/tests/test_map_alerts.py` (new, 19 tests)
+- `tools/samples/demo_examples.txt`: Example 7 (map + alerts by hand)
+
+**How to test it (PowerShell):**
+```powershell
+cd "C:\Users\Avi Verma\Documents\Code\Scam_Map\server"
+.venv\Scripts\python -m pytest -q                       # expected: 154 passed
+$env:DATABASE_URL = "sqlite:///./scenarios.db"
+.venv\Scripts\python -m uvicorn app.main:app --port 8000 --no-access-log
+```
+In a 2nd window, from the repo root:
+```powershell
+server\.venv\Scripts\python tools\scenarios.py --base http://localhost:8000 --latency 200
+# expected: 42/42 checks passed (spike → SPIKE, steady → none, new type → NEW_TYPE,
+#           month-old not on map, fakes fire no alert, lookup p95 ~30 ms)
+```
+Then in `http://localhost:8000/docs`, while that data is still loaded:
+- `GET /alerts`, pincode `560103` (Bellandur) → SPIKE
+- pincode `560100` (Electronic City) → NEW_TYPE job-offer
+- pincode `560037` (Marathahalli) → `[]` (busy but normal)
+- `GET /map`, pincode `560102`, radius_km `5` → clusters at the areas' own points
+- `GET /map`, pincode `560024` (Hebbal) → no cluster (its reports are 30 days old)
+- By hand: Example 7 in `tools/samples/demo_examples.txt`.
+
+**Known gaps / next:**
+- Severity thresholds and the NEW_TYPE "2 reports in a quiet area" rule are our own choices. Explain them in the README.
+- Next: P4 disputes (`POST /challenges`).
 
 ### P1 — Trust rules + rate limit — 2026-10-31
 **What was built (simple terms):**

@@ -2,7 +2,7 @@
 
 Run it with `uvicorn app.main:app --reload --no-access-log` from the `server/` folder.
 Endpoints so far (contract in docs/01, source of truth [PRD §A]):
-  GET /health, POST /reports, GET /lookup, POST /admin/reset
+  GET /health, POST /reports, GET /lookup, GET /map, GET /alerts, POST /admin/reset
   GET /debug/explain (only when the EXPLAIN_ENABLED env var is "1"; shows the trust rules' working)
 Later steps add /map, /alerts, /challenges and /license (see docs/08-implementation-plan.md).
 """
@@ -18,6 +18,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import delete
 
 from app import db, reference
+from app.alerts import build_alerts
+from app.assessment import refresh_all_trusted_flags
+from app.geo import DEFAULT_DAYS, DEFAULT_RADIUS_KM, MAX_DAYS, MAX_RADIUS_KM, build_map
 from app.lookup import explain, lookup
 from app.normalize import IDENTIFIER_TYPES, InvalidIdentifier, normalize
 from app.privacy import log, safe_logging_middleware, setup_logging
@@ -30,8 +33,10 @@ setup_logging()
 #    or broken we want the server to fail loudly at startup, not on the first request.
 reference.load()
 
-# 3) Create any missing database tables.
+# 3) Create any missing database tables, then re-check the `trusted` flag on every stored report
+#    (so /map and /alerts are right even for reports saved by an older version).
 db.init_db()
+refresh_all_trusted_flags()
 
 # Neon's free database falls asleep after ~5 idle minutes, and waking it takes up to a second,
 # which would blow our 0.5 s lookup budget. A tiny query every 4 minutes keeps it awake.
@@ -147,6 +152,40 @@ def get_lookup(type: str | None = None, value: str | None = None):  # noqa: A002
         return bad_request("invalid value")
 
     return lookup(type, normalized)
+
+
+@app.get("/map")
+def get_map(pincode: str | None = None, days: str | None = None, radius_km: str | None = None):
+    """Scam reports by area for the last N days ([PRD §A.4]).
+
+    Example: /map?pincode=560102&days=7&radius_km=2 (days defaults to 7, radius_km to 2).
+    Out: {"clusters": [...]}, one per area within the radius that has trusted reports in the window.
+    Without a pincode it returns every area (handy for the app's city/India view).
+    """
+    # 1) Check the inputs; anything odd is a 400, never a crash.
+    if pincode is not None and reference.get_area(pincode) is None:
+        return bad_request("unknown pincode")
+    try:
+        n_days = int(days) if days not in (None, "") else DEFAULT_DAYS
+        radius = float(radius_km) if radius_km not in (None, "") else DEFAULT_RADIUS_KM
+    except ValueError:
+        return bad_request("days must be a whole number and radius_km a number")
+    if not 1 <= n_days <= MAX_DAYS or not 0 <= radius <= MAX_RADIUS_KM:
+        return bad_request(f"days must be 1-{MAX_DAYS} and radius_km 0-{int(MAX_RADIUS_KM)}")
+
+    # 2) Build the clusters from trusted reports.
+    return {"clusters": build_map(pincode.strip() if pincode else None, n_days, radius)}
+
+
+@app.get("/alerts")
+def get_alerts(pincode: str | None = None):
+    """Alerts for an area ([PRD §A.5]): SPIKE and NEW_TYPE, or {"alerts": []} when all is normal.
+
+    Without a pincode it returns alerts for every area (for the app's banner).
+    """
+    if pincode is not None and reference.get_area(pincode) is None:
+        return bad_request("unknown pincode")
+    return {"alerts": build_alerts(pincode.strip() if pincode else None)}
 
 
 # The explain endpoint is for demos and debugging. It only shows counts and scores (no ids, no

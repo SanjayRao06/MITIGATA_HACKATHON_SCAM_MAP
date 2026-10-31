@@ -180,6 +180,39 @@ POST Report A again but change these lines:
 
 
 ------------------------------------------------
+EXAMPLE 7 - MAP and ALERTS  (GET /map, GET /alerts)
+------------------------------------------------
+Only TRUSTED reports count (one per independent person), and only reports from the last N days.
+After sending Examples 1-4 above:
+
+GET /map     pincode = 560102                         -> HSR Layout cluster (default 7 days, 2 km)
+GET /map     pincode = 560102   radius_km = 5         -> also Koramangala, BTM Layout, Jayanagar... if they have reports
+GET /map     pincode = (empty)                        -> every area with reports (city/India view)
+GET /map     pincode = 999999                         -> 400 unknown pincode
+Each cluster: pincode, locality, city, count, top_scam_type, severity (CRIT >=10, HIGH >=5, else MED;
+one level higher for digital-arrest / sextortion / loss >= 50,000), lat/lng = the AREA's point.
+
+GET /alerts  pincode = 560102                         -> {"alerts": []}  (nothing unusual yet)
+
+To see a NEW_TYPE alert: send 2 reports of a scam type the area hasn't had, from 2 different
+people/networks with their own notes and new numbers, e.g. pincode 560064 (Yelahanka):
+{
+  "occurred_at": "2026-10-31T15:00:00+05:30",
+  "reporter_id": "r_newtype1", "ip_prefix": "77.1.1",
+  "channel": "SMS or WhatsApp", "scam_type": "job-offer",
+  "identifier_type": "phone", "identifier_value": "9811122233",
+  "pincode": "560064",
+  "note": "Telegram task job, first paid 200 then asked a 5000 deposit"
+}
+(second one: reporter_id r_newtype2, ip_prefix 77.2.2, identifier_value 9822233344, a different note)
+GET /alerts  pincode = 560064   -> NEW_TYPE job-offer
+(In an area that already had reports in the last 30 days, ONE such report is enough.)
+
+A SPIKE needs >= 5 trusted reports in the last 24 h AND at least double the daily average of the
+week before. That is easiest to see with:  python tools/scenarios.py --base http://localhost:8000
+
+
+------------------------------------------------
 FINISH
 ------------------------------------------------
 POST /admin/reset -> Execute   (always on the live server)

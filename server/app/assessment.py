@@ -84,3 +84,20 @@ def refresh_trusted_flags(conn, identifier_id: int, verified: bool) -> dict:
     if trusted_ids:
         conn.execute(update(reports).where(reports.c.id.in_(trusted_ids)).values(trusted=True))
     return result
+
+
+def refresh_all_trusted_flags() -> int:
+    """Re-judge every identifier and store fresh `trusted` flags. Returns how many were checked.
+
+    Run once at server start. Reports stored before the `trusted` column existed, or before a
+    rule was tuned, then get the right flags, so /map and /alerts are correct after any deploy.
+    """
+    from app import reference
+    from app.db import engine, identifiers
+
+    with engine.begin() as conn:
+        idents = conn.execute(select(identifiers.c.id, identifiers.c.type, identifiers.c.value)).all()
+        for ident in idents:
+            verified = reference.get_verified(ident.type, ident.value) is not None
+            refresh_trusted_flags(conn, ident.id, verified)
+    return len(idents)
