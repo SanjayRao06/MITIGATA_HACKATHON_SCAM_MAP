@@ -16,3 +16,5 @@ node_modules/
 dist/
 .neon
 .env.local
+# raw Google Stitch exports (screenshots kept in docs/design/stitch)
+stitch_scam_map_india_web_app*/

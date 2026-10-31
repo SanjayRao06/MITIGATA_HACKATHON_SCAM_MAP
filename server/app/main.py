@@ -3,8 +3,9 @@
 Run it with `uvicorn app.main:app --reload --no-access-log` from the `server/` folder.
 Endpoints so far (contract in docs/01, source of truth [PRD §A]):
   GET /health, POST /reports, GET /lookup, GET /map, GET /alerts, POST /challenges, POST /admin/reset
-  GET /debug/explain (only when the EXPLAIN_ENABLED env var is "1"; shows the trust rules' working)
-Later steps add /map, /alerts, /challenges and /license (see docs/08-implementation-plan.md).
+  GET /meta, GET /stats (for the website), GET /debug/explain (only when EXPLAIN_ENABLED=1)
+  The website itself (web/) is served at "/" and its files under "/static/".
+Still to come: /license (P2, see PROGRESS.md).
 """
 
 import asyncio
@@ -14,7 +15,9 @@ import os
 from fastapi import Body, FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from sqlalchemy import delete
 
 from app import db, reference
@@ -26,6 +29,7 @@ from app.lookup import explain, lookup
 from app.normalize import IDENTIFIER_TYPES, InvalidIdentifier, normalize
 from app.privacy import log, safe_logging_middleware, setup_logging
 from app.reports import RateLimited, ReportError, save_report, validate_report
+from app.stats import build_stats, cities
 
 # 1) Logging first, so even startup problems are logged safely.
 setup_logging()
@@ -109,8 +113,29 @@ REPORT_EXAMPLE = {
 }
 
 
+# The website can't know the user's network, so it sends ip_prefix "web" and the server fills
+# in the first 3 parts of the caller's IP (e.g. "49.36.12"). It is hashed straight away in
+# validate_report() and never stored or logged in readable form. The judges' test tool sends its
+# own ip_prefix, which is always used as-is ([PRD §A.0] rule 2).
+WEB_IP_MARKER = "web"
+
+
+def caller_ip_prefix(request: Request) -> str:
+    """First 3 parts of the caller's IPv4 address (or first 3 groups of IPv6).
+
+    Render sits behind a proxy, so the real client address is the first entry of X-Forwarded-For.
+    """
+    forwarded = request.headers.get("x-forwarded-for", "")
+    ip = forwarded.split(",")[0].strip() or (request.client.host if request.client else "")
+    if "." in ip:
+        return ".".join(ip.split(".")[:3])
+    if ":" in ip:
+        return ":".join(ip.split(":")[:3])
+    return "unknown"
+
+
 @app.post("/reports", status_code=201)
-async def post_report(body: dict = Body(..., openapi_examples={
+async def post_report(request: Request, body: dict = Body(..., openapi_examples={
         "report": {"summary": "A phone scam report", "value": REPORT_EXAMPLE}})):
     """Receive one scam report ([PRD §A.2]).
 
@@ -118,13 +143,17 @@ async def post_report(body: dict = Body(..., openapi_examples={
     `body: dict` tells FastAPI (and the /docs page) to expect a JSON object. Broken JSON or a
     non-object becomes a 400 via validation_error_to_400. All field checks happen in validate_report().
     """
-    # 1) Validate (normalizer, pincode, times, reporter fields).
+    # 1) Reports from our own website: work out the network from the connection.
+    if isinstance(body, dict) and str(body.get("ip_prefix", "")).strip().lower() == WEB_IP_MARKER:
+        body = {**body, "ip_prefix": caller_ip_prefix(request)}
+
+    # 2) Validate (normalizer, pincode, times, reporter fields).
     try:
         clean = validate_report(body)
     except ReportError as exc:
         return bad_request(str(exc))
 
-    # 2) Save it. The database work runs in a worker thread so the server stays responsive.
+    # 3) Save it. The database work runs in a worker thread so the server stays responsive.
     #    Too many reports from one reporter in a short time -> 429 (allowed, [PRD §A.0] rule 4).
     try:
         return await run_in_threadpool(save_report, clean)
@@ -214,6 +243,31 @@ async def post_challenge(body: dict = Body(..., openapi_examples={
     return await run_in_threadpool(save_challenge, clean)
 
 
+@app.get("/meta")
+def get_meta():
+    """Reference data for the website: the 25 areas (with map points), scam types and channels.
+
+    Comes straight from data/*.json, so the app and the server always agree on the lists.
+    """
+    return {
+        "areas": list(reference.AREAS.values()),
+        "scam_types": reference.SCAM_TYPES,
+        "channels": reference.CHANNELS,
+        "cities": cities(),
+    }
+
+
+@app.get("/stats")
+def get_stats(city: str | None = None):
+    """Numbers for the Dashboard page: this week vs last week, per day, top types, top areas, alerts.
+
+    Counts only trusted reports. `city` is one of the cities from /meta; omit it for all of India.
+    """
+    if city is not None and city not in cities():
+        return bad_request("unknown city")
+    return build_stats(city)
+
+
 # The explain endpoint is for demos and debugging. It only shows counts and scores (no ids, no
 # notes), but it is still switched off unless EXPLAIN_ENABLED=1 is set on the server.
 EXPLAIN_ENABLED = os.environ.get("EXPLAIN_ENABLED") == "1"
@@ -283,3 +337,16 @@ def _openapi_with_real_status_codes():
 
 
 app.openapi = _openapi_with_real_status_codes
+
+
+# ---------------------------------------------------------------- the website
+# Served by this same server: one address, one deploy. Pages use "#/report", "#/map" etc. in the
+# URL, so they never clash with the API paths above (/map, /lookup, ...).
+WEB_DIR = Path(__file__).resolve().parents[1] / "web"   # server/web: inside Render's root dir, so pushes redeploy
+if WEB_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+
+    @app.get("/", include_in_schema=False)
+    def website():
+        """The website's single page (index.html); the browser shows the right screen."""
+        return FileResponse(WEB_DIR / "index.html")

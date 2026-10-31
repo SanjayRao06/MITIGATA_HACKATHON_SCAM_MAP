@@ -55,7 +55,7 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 | P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ✅ 42/42 scenario checks (16/16 random runs) | — |
 | P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ✅ done | — |
 | P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
-| P6 | **Frontend** (Report, Lookup, Map heatmap, Expired screen) + **Hindi + icons** | 15 | **Avi** | 🟡 designing in Google Stitch | waiting for Stitch export |
+| P6 | **Frontend** (all 9 pages) + **Hindi + icons** | 15 | **Avi** | 🟡 built & live; needs a real-phone stopwatch test | test on a phone (EN, HI, icons) |
 | P7 | **Ops**: keep-awake, frontend deploy, live run of all scenarios | protects all | **Sanjay** | ⬜ | UptimeRobot anytime |
 | P8 | **README + video + pitch + rehearsal** | 10 | **both** (split below) | ⬜ | grows as we go; finish last |
 | P9 | Extras: Hindi voice (Sarvam), explain panel, lookalike domains, QR | tie-break | whoever is free | ⬜ | only if time |
@@ -94,7 +94,7 @@ tests must still pass with a valid test licence loaded).
 | 3 | Map + alerts: spike → alert, normal → none, new type → alert, month-old not on map | 10 | Test tool | P3 | ✅ |
 | 4 | Privacy: < 3 reporters hidden, map never shows a person's location, careful wording. **Reporter identifiable = disqualified** | 15 | Test tool + judge | P0 ✅, P5, P6 | backend ✅ |
 | 5 | Server + licence: 4-step live demo on https, **no restart** | 15 | Judge | P2 | ❌ |
-| 6 | Easy to report: phone + stopwatch < 60 s; works in **Hindi or icons only**; **no login** | 15 | Judge | P6 | ❌ |
+| 6 | Easy to report: phone + stopwatch < 60 s; works in **Hindi or icons only**; **no login** | 15 | Judge | P6 | 🟡 built, not yet timed on a phone |
 | 7 | Demo + code: runs from README; trust rules + licence explained; pitch | 10 | Judge | P8 | ❌ |
 | B1 | Verified businesses/helplines → "Verified business" | +3 | Test tool | P0 | ✅ |
 | B2 | Dispute feature | +2 | Test tool | P4 | ✅ |
@@ -191,24 +191,24 @@ verified `#2E8B57`. Style **clean civic** (flat, thin borders, radius 12, line i
 headings, Source Sans 3 body, Noto Sans Devanagari. **Responsive** (phone + laptop). Pages: Home, Report, Check,
 Map, Dashboard, Safety guide, How it works & privacy, Business dispute, Licence expired.
 Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
-- [ ] 6.1 Design screens in **Google Stitch** (9 pages, mobile + desktop) using `docs/11-stitch-prompts.md`; export to `web/stitch/`
-- [ ] 6.2 Project setup in `web/` (Vite + React or plain JS); API base URL in one config constant
-- [ ] 6.3 **i18n from day one:** `en.json` + `hi.json`, every visible string from them; EN | हिंदी toggle
-- [ ] 6.4 **Home:** two big buttons (Check a number / Report a scam) + helpline strip (1930 tel: link, cybercrime.gov.in)
-- [ ] 6.5 **Report (one screen):** channel icon tiles (exact PRD strings) → when chips (Just now / Today / Yesterday) → paste box with auto-detected type chip → area dropdown (remembered; optional "use my location" converted **on the phone** to nearest area, coordinates discarded) → optional scam-type icons, note, amount → Submit → "Thanks. Reported anonymously." + 1930
-- [ ] 6.6 **Icons-only path:** every choice is an icon with a label; works without reading
-- [ ] 6.7 Anonymous `reporter_id` = random UUID in localStorage; never ask for name or phone; **no login**
-- [ ] 6.8 **Lookup:** paste box → colour card (red KNOWN_SCAM / amber SUSPICIOUS / grey NO_REPORTS / green VERIFIED), masked value, "Reported by N people near you", last seen, **safety advice for the scam type**, "Under review" badge if challenged
-- [ ] 6.9 **Map / heatmap:** Leaflet + OpenStreetMap with a light Google-Maps-like style (free, no card); circles at area points sized/coloured by count and severity from `/map`; alerts banner from `/alerts`
-- [ ] 6.10 **Licence expired** full screen (EN + HI) on any 403 `LICENSE_EXPIRED`; polls `/license` every 20 s and recovers
+- [x] 6.1 Design screens in **Google Stitch** (9 pages, mobile + desktop) using `docs/11-stitch-prompts.md`; export to `web/stitch/`
+- [x] 6.2 Project setup in `web/` (Vite + React or plain JS); API base URL in one config constant
+- [x] 6.3 **i18n from day one:** `en.json` + `hi.json`, every visible string from them; EN | हिंदी toggle
+- [x] 6.4 **Home:** two big buttons (Check a number / Report a scam) + helpline strip (1930 tel: link, cybercrime.gov.in)
+- [x] 6.5 **Report (one screen):** channel icon tiles (exact PRD strings) → when chips (Just now / Today / Yesterday) → paste box with auto-detected type chip → area dropdown (remembered; optional "use my location" converted **on the phone** to nearest area, coordinates discarded) → optional scam-type icons, note, amount → Submit → "Thanks. Reported anonymously." + 1930
+- [x] 6.6 **Icons-only path:** every choice is an icon with a label; works without reading
+- [x] 6.7 Anonymous `reporter_id` = random UUID in localStorage; never ask for name or phone; **no login**
+- [x] 6.8 **Lookup:** paste box → colour card (red KNOWN_SCAM / amber SUSPICIOUS / grey NO_REPORTS / green VERIFIED), masked value, "Reported by N people near you", last seen, **safety advice for the scam type**, "Under review" badge if challenged
+- [x] 6.9 **Map / heatmap:** Leaflet + OpenStreetMap with a light Google-Maps-like style (free, no card); circles at area points sized/coloured by count and severity from `/map`; alerts banner from `/alerts`
+- [x] 6.10 **Licence expired** full screen (EN + HI) on any 403 `LICENSE_EXPIRED`; polls `/license` every 20 s and recovers
 - [ ] 6.11 UI groups the 12 scam types visually (e.g. Calls / Bank & KYC / Money & UPI / Jobs & offers) but sends the exact PRD values
-- [ ] 6.12 Hidden stopwatch (form open → submit) logged to console for rehearsal
+- [x] 6.12 Hidden stopwatch (form open → submit) logged to console for rehearsal
 - [ ] 6.13 Serve the built site from our server (or Vercel/Netlify) and test on a real phone on mobile data
-- [ ] 6.14 If the site is hosted separately from the API: enable CORS on the server for that site's address only
-- [ ] 6.15 `ip_prefix` for real app users: the browser can't know it, so send `"web"` and let the server derive the first 3 parts of the caller's IP **and hash it immediately** (test tool keeps sending its own)
-- [ ] 6.17 Dashboard page + small stats endpoint (`GET /stats`: 7-day totals, per-day counts, top types, top areas)
-- [ ] 6.18 Safety guide, How it works & privacy, Business dispute pages (dispute form posts to P4 `/challenges`)
-- [ ] 6.16 Safety-advice text per scam type in `en.json` + `hi.json` (e.g. "Police never arrest anyone on a video call", "Banks never ask for your OTP", "Receiving money never needs a PIN or QR scan")
+- [x] 6.14 If the site is hosted separately from the API: enable CORS on the server for that site's address only
+- [x] 6.15 `ip_prefix` for real app users: the browser can't know it, so send `"web"` and let the server derive the first 3 parts of the caller's IP **and hash it immediately** (test tool keeps sending its own)
+- [x] 6.17 Dashboard page + small stats endpoint (`GET /stats`: 7-day totals, per-day counts, top types, top areas)
+- [x] 6.18 Safety guide, How it works & privacy, Business dispute pages (dispute form posts to P4 `/challenges`)
+- [x] 6.16 Safety-advice text per scam type in `en.json` + `hi.json` (e.g. "Police never arrest anyone on a video call", "Banks never ask for your OTP", "Receiving money never needs a PIN or QR scan")
 **Done when:** stopwatch < 60 s on a real phone in English, Hindi and icons-only; expired screen appears on 403.
 **Judges test:** they report on a phone with a stopwatch, then again in Hindi or using only icons (> 2 min or a login before the form = 0).
 
@@ -332,6 +332,62 @@ what stops editing the licence date · what if the clock is set back · how is l
 
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
+
+### P6 — Website (all pages, EN/HI, phone + laptop) — 2026-10-31
+**What was built (simple terms):**
+- A full website served by our own server at `/`: Home, Check, Report (+ success), Scam map, Dashboard,
+  Safety guide, How it works, "Is this your number?" (dispute), More menu, and a Licence-expired screen.
+- **Design:** layouts from the Google Stitch export, colours from **our** Sage & Cream palette (Stitch had
+  drifted to mint). Phone first, plus a laptop layout from 900 px (top nav, two columns).
+- **Report in < 30 s, no login:** channel tiles → when chips → paste box with auto-detected type → area
+  (search or "Use my location", converted to the nearest area on the phone and the coordinates thrown away) → send.
+  Optional details: scam-type icons, note, money lost, "I have a screenshot".
+- **Check:** coloured result card (red / amber / grey / green), masked value, safety advice for the scam
+  type, "under review" badge, recent reports (no reporter data), 1930 button.
+- **Map:** Leaflet + OpenStreetMap (free, no key), softened to the cream palette. Circles at the AREA points
+  sized and coloured by severity, an area list with search, city and time-range chips, live alerts.
+- **Dashboard:** this week vs last week, reports per day, top scam types, most affected areas, alerts.
+- **English | हिंदी** everywhere (toggle, or `?lang=hi` in a link), with safety advice for all 12 scam types.
+- **Privacy:** anonymous random id in the browser only, no name or phone ever. Server text is escaped.
+  The website sends `ip_prefix: "web"` and the server derives the network from the connection and hashes it at once.
+- **Licence:** any 403 `LICENSE_EXPIRED` shows the full-screen message, which re-checks every 20 s and recovers.
+- **Removed from the Stitch design on purpose:** accusing wording ("fraudulent", "धोखाधड़ी"), claims of being an official body
+  (Ministry/registry), a profile/login icon, and made-up numbers.
+- **Backend additions:** `GET /meta` (areas, scam types, channels, cities) and `GET /stats` (dashboard numbers,
+  trusted reports only).
+
+**Files touched:**
+- `server/web/index.html`, `app.css`, `app.js`, `i18n.js`, `icons.js` (new): the website, no build step
+- `server/app/stats.py` (new): `/stats`
+- `server/app/main.py`: `/meta`, `/stats`, website at `/` + `/static/`, "web" ip_prefix handling
+- `server/tests/test_web.py` (new, 12 tests incl. a banned-words check on the website text, English and Hindi)
+- `docs/design/stitch/`: the Stitch screenshots + notes on what we changed
+
+**How to test it (PowerShell):**
+```powershell
+cd "C:\Users\Avi Verma\Documents\Code\Scam_Map\server"
+.venv\Scripts\python -m pytest -q                       # expected: 180 passed
+.venv\Scripts\python -m uvicorn app.main:app --reload --no-access-log
+```
+Open **http://localhost:8000**. To see busy maps and dashboards, fill it first (this wipes dev.db):
+```powershell
+cd "C:\Users\Avi Verma\Documents\Code\Scam_Map"
+server\.venv\Scripts\python tools\scenarios.py --base http://localhost:8000
+```
+Then:
+- **Check:** `1800 1600` (green) and `12345` (error).
+- **Report:** a number, then Check it.
+- **Map:** Bengaluru shows a SPIKE in Bellandur.
+- **Dashboard.**
+- **Hindi:** the EN | हिंदी toggle.
+- **Phone size:** browser DevTools → device toolbar (iPhone / Pixel).
+- **Stopwatch:** open DevTools Console; each sent report logs `[stopwatch] report sent in N s`.
+
+**Known gaps / next:**
+- Test on a real phone over mobile data, with a stopwatch, in English, Hindi and icons only (6.13).
+- A separate "icons-only" mode isn't built. Every choice is an icon with a short label, which should satisfy
+  "using only icons", but check with the team.
+- The 12 scam types are shown as one icon grid (not grouped).
 
 ### P4 — Disputes (POST /challenges) — 2026-10-31
 **What was built (simple terms):**

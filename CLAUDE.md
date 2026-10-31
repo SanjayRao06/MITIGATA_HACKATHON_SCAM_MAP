@@ -90,4 +90,4 @@ server/app/alerts.py        SPIKE / NEW_TYPE
 server/app/data/*.json      reference data from the brief's appendix
 server/tests/               pytest per module
 tools/                      make_license.py, keygen.py, scenarios.py, replay_logs.py
-web/                        mobile website
+server/web/                 the website (served by FastAPI at "/"; inside server/ so Render redeploys on change)

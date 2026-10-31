@@ -1,0 +1,95 @@
+<!doctype html>
+<!--
+  Scam Map website: one page that shows different screens (Home, Check, Report, Map, ...).
+  The server serves this file at "/" and the other files under "/static/".
+  Screens are picked from the address (#/check, #/report, #/map ...) by app.js, so the page
+  never reloads and works fast on phones. All visible text comes from i18n.js (English + Hindi).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4F6F52">
+  <meta name="description" content="Check a phone number, UPI ID or link before you trust it, and report scams anonymously.">
+  <title>Scam Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600&family=Noto+Sans+Devanagari:wght@400;600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <a class="skip" href="#view">Skip to content</a>
+
+  <!-- Top bar: wordmark, desktop navigation, language toggle -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#/" aria-label="Scam Map home">
+        <span class="brand-mark" data-icon="shieldPin"></span>
+        <span class="brand-name">Scam Map</span>
+      </a>
+      <nav class="topnav" aria-label="Main">
+        <a href="#/check" data-nav="check" data-t="nav_check"></a>
+        <a href="#/report" data-nav="report" data-t="nav_report"></a>
+        <a href="#/map" data-nav="map" data-t="nav_map"></a>
+        <a href="#/dashboard" data-nav="dashboard" data-t="nav_dashboard"></a>
+        <a href="#/guide" data-nav="guide" data-t="nav_guide"></a>
+        <a href="#/how" data-nav="how" data-t="nav_how"></a>
+      </nav>
+      <button class="lang" id="langToggle" type="button" aria-label="Change language">
+        <span data-lang="en">EN</span><span class="sep">|</span><span data-lang="hi">हिंदी</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- The current screen is drawn here by app.js -->
+  <main id="view" tabindex="-1" aria-live="polite"></main>
+
+  <!-- Footer strip on every page: helpline + portal + privacy promise -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="helpline">
+        <span class="helpline-icon" data-icon="phone"></span>
+        <div>
+          <strong data-t="footer_lost"></strong>
+          <span data-t="footer_lost_sub"></span>
+        </div>
+        <a class="btn btn-danger btn-sm" href="tel:1930"><span data-t="call_1930"></span></a>
+      </div>
+      <p class="footer-links">
+        <a href="https://cybercrime.gov.in" target="_blank" rel="noopener">cybercrime.gov.in</a>
+        <span aria-hidden="true">·</span>
+        <a href="#/how" data-t="nav_how"></a>
+        <span aria-hidden="true">·</span>
+        <a href="#/dispute" data-t="nav_dispute"></a>
+      </p>
+      <p class="footer-note"><span data-icon="lock"></span> <span data-t="footer_privacy"></span></p>
+    </div>
+  </footer>
+
+  <!-- Bottom tab bar (phones only) -->
+  <nav class="tabbar" aria-label="Main">
+    <a href="#/" data-nav="home"><span data-icon="home"></span><span data-t="tab_home"></span></a>
+    <a href="#/check" data-nav="check"><span data-icon="search"></span><span data-t="tab_check"></span></a>
+    <a href="#/report" data-nav="report" class="tab-report"><span class="tab-report-btn" data-icon="plus"></span><span data-t="tab_report"></span></a>
+    <a href="#/map" data-nav="map"><span data-icon="mapPin"></span><span data-t="tab_map"></span></a>
+    <a href="#/more" data-nav="more"><span data-icon="dots"></span><span data-t="tab_more"></span></a>
+  </nav>
+
+  <!-- Full-screen "licence expired" message, shown on any 403 LICENSE_EXPIRED -->
+  <div class="expired" id="expired" hidden role="alertdialog" aria-modal="true" aria-labelledby="expiredTitle">
+    <div class="expired-card">
+      <span class="expired-icon" data-icon="lock"></span>
+      <h1 id="expiredTitle">Licence expired. Contact your provider.</h1>
+      <p lang="hi">लाइसेंस समाप्त हो गया है। कृपया अपने प्रदाता से संपर्क करें।</p>
+      <p class="muted"><span class="spinner" aria-hidden="true"></span> <span data-t="expired_checking"></span></p>
+      <a class="btn btn-danger" href="tel:1930"><span data-t="call_1930"></span></a>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="/static/icons.js"></script>
+  <script src="/static/i18n.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
