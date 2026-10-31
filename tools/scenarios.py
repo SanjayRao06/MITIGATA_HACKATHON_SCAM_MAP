@@ -511,6 +511,68 @@ def scenario_dispute(run: Run) -> None:
     run.remember(name, "phone", number, "Suspicious + 'Under review' badge, hidden (was Known scam)")
 
 
+# Each other city gets its own mix of scam types, so every city's dashboard looks different.
+OTHER_CITY_MIX = {
+    "400050": ("Mumbai", ["investment-group", "digital-arrest", "courier-customs", "upi-refund-qr"]),
+    "110016": ("Delhi", ["digital-arrest", "loan-app-harassment", "sextortion", "otp-call"]),
+    "500081": ("Hyderabad", ["job-offer", "investment-group", "fake-kyc-link"]),
+    "600020": ("Chennai", ["electricity-disconnection", "otp-call", "courier-customs"]),
+    "411014": ("Pune", ["job-offer", "fake-customer-care", "upi-refund-qr"]),
+    "700091": ("Kolkata", ["lottery-prize", "otp-call", "fake-kyc-link"]),
+    "380015": ("Ahmedabad", ["investment-group", "upi-refund-qr", "lottery-prize"]),
+    "302017": ("Jaipur", ["electricity-disconnection", "digital-arrest", "loan-app-harassment"]),
+    "226010": ("Lucknow", ["fake-kyc-link", "lottery-prize", "otp-call"]),
+    "682030": ("Kochi", ["job-offer", "courier-customs", "fake-customer-care"]),
+}
+# The channel a scam type usually comes through (so the demo data reads naturally).
+TYPE_CHANNEL = {
+    "digital-arrest": "Phone call", "otp-call": "Phone call", "fake-customer-care": "Phone call",
+    "electricity-disconnection": "SMS or WhatsApp", "fake-kyc-link": "Fake website",
+    "job-offer": "SMS or WhatsApp", "investment-group": "SMS or WhatsApp", "lottery-prize": "SMS or WhatsApp",
+    "courier-customs": "Phone call", "loan-app-harassment": "Phone call", "sextortion": "SMS or WhatsApp",
+    "upi-refund-qr": "UPI request",
+}
+
+
+def scenario_other_cities(run: Run) -> None:
+    """Demo data for the 10 non-Bengaluru cities, so every city's dashboard and map have something to show.
+
+    Per city: one wave per scam type in its mix (4-6 unrelated people, own networks, own words, spread
+    over 2 weeks, some money lost), plus a few one-off reports. These are all REAL-looking reports, so
+    they count; the fake-report attacks stay in the Bengaluru scenarios above.
+    """
+    name = "other cities"
+    for pin, (city, types) in OTHER_CITY_MIX.items():
+        for k, scam_type in enumerate(types):
+            # 1) A wave: 4-6 people on one number (UPI ID for UPI scams), spread over ~2 weeks.
+            id_type = "upi" if scam_type == "upi-refund-qr" else "phone"
+            value = run.upi() if id_type == "upi" else run.phone()
+            people = run.rng.randint(4, 6)     # 4+: still Known scam if two notes happen to look alike
+            start = run.rng.uniform(2, 110)                          # hours ago of the newest report
+            for i in range(people):
+                run.send(run.report(id_type, value, start + i * run.rng.uniform(6, 30), pin,
+                                    run.person(), run.network(), channel=TYPE_CHANNEL[scam_type],
+                                    scam_type=scam_type, note=run.real_note(scam_type),
+                                    has_screenshot=run.rng.random() < 0.4,
+                                    amount_lost_inr=run.rng.choice([0, 0, 2500, 18000, 75000])))
+            if k == 0:
+                run.remember(name, id_type, value, f"Known scam in {city} ({scam_type})")
+        # 2) A few one-off reports on different numbers (each only one person: masked, Suspicious).
+        for _ in range(run.rng.randint(4, 8)):
+            scam_type = run.rng.choice(types)
+            run.send(run.report("phone", run.phone(), run.rng.uniform(1, 230), pin, run.person(), run.network(),
+                                channel=TYPE_CHANNEL[scam_type], scam_type=scam_type,
+                                note=run.real_note(scam_type)))
+
+    # 3) Check: every one of these cities now has reports on its dashboard this week or last week.
+    empty = []
+    for pin, (city, _) in OTHER_CITY_MIX.items():
+        _, st = run.get(f"/stats?city={quote(city)}")
+        if not (st.get("reports_this_week") or st.get("reports_last_week")):
+            empty.append(city)
+    run.check(name, "dashboard has data in 10 more cities", "no empty city", empty or "none", not empty)
+
+
 def check_latency(run: Run, extra: int) -> None:
     """Lookups must answer in under 500 ms ([PRD §8] row 2). Optionally fire `extra` more lookups."""
     for _ in range(extra):
@@ -525,7 +587,7 @@ def check_latency(run: Run, extra: int) -> None:
 
 SCENARIOS = [scenario_junk, scenario_spammer, scenario_wifi_farm, scenario_bakery, scenario_real_campaign,
              scenario_real_upi, scenario_small_real, scenario_lookup_basics, scenario_old_reports,
-             scenario_spike, scenario_steady, scenario_new_type, scenario_dispute]
+             scenario_spike, scenario_steady, scenario_new_type, scenario_dispute, scenario_other_cities]
 
 
 # ----------------------------------------------------------------------------- running + printing

@@ -49,8 +49,12 @@ def percentile(sorted_ms: list[float], pct: float) -> float:
     return sorted_ms[min(len(sorted_ms) - 1, int(len(sorted_ms) * pct))]
 
 
-def time_requests(base: str, paths: list[str]) -> tuple[list[float], int]:
-    """In: server address and the paths to GET. Out: (milliseconds per request, number of non-200 replies).
+def time_requests(base: str, paths: list[str]) -> tuple[list[float], list[float], int]:
+    """In: server address and the paths to GET.
+    Out: (round-trip ms per request, server's own ms per request, number of non-200 replies).
+
+    The server's own time comes from its Server-Timing header ("app;dur=4.2"), so we can tell
+    our code's time apart from the network's.
 
     Uses ONE kept-open connection, like a test tool that reuses its session, so the TLS handshake
     is paid once and not on every request (it would otherwise dominate the numbers).
@@ -58,7 +62,7 @@ def time_requests(base: str, paths: list[str]) -> tuple[list[float], int]:
     url = urlparse(base.replace("://localhost", "://127.0.0.1", 1))
     cls = http.client.HTTPSConnection if url.scheme == "https" else http.client.HTTPConnection
     conn = cls(url.hostname, url.port, timeout=60)
-    times, bad = [], 0
+    times, server_ms, bad = [], [], 0
     for n, path in enumerate(paths, 1):
         if n % 25 == 0 or n == len(paths):
             print(f"  ... {n}/{len(paths)}", flush=True)     # so a slow server doesn't look frozen
@@ -67,9 +71,12 @@ def time_requests(base: str, paths: list[str]) -> tuple[list[float], int]:
         resp = conn.getresponse()
         resp.read()
         times.append((time.perf_counter() - start) * 1000)
+        timing = resp.getheader("Server-Timing") or ""
+        if "dur=" in timing:
+            server_ms.append(float(timing.split("dur=", 1)[1].split(",")[0].split(";")[0]))
         bad += resp.status != 200
     conn.close()
-    return times, bad
+    return times, server_ms, bad
 
 
 def main(argv=None) -> int:
@@ -84,11 +91,11 @@ def main(argv=None) -> int:
     print(f"Timing {args.base} (takes 1-2 minutes) ...", flush=True)
 
     # 1) Baseline: /health does no database work, so its time is the network + hosting floor.
-    base_times, _ = time_requests(args.base, ["/health"] * min(args.count, 100))
+    base_times, _, _ = time_requests(args.base, ["/health"] * min(args.count, 100))
 
     # 2) The lookups themselves.
     paths = [f"/lookup?type={t}&value={quote(v)}" for t, v in make_lookups(args.count, rng)]
-    times, bad = time_requests(args.base, paths)
+    times, server_ms, bad = time_requests(args.base, paths)
 
     # 3) If answers were errors (e.g. licence expired), the timing means nothing.
     if bad:
@@ -105,8 +112,11 @@ def main(argv=None) -> int:
     print(f"  lookup p95                     : {p95:6.0f} ms   (budget {LOOKUP_BUDGET_MS} ms)")
     print(f"  slowest                        : {ordered[-1]:6.0f} ms")
     print(f"  server adds (median - floor)   : {extra:6.0f} ms")
+    if server_ms:
+        srv = sorted(server_ms)
+        print(f"  SERVER'S OWN TIME (header)     : median {percentile(srv, 0.5):.0f} ms, p95 {percentile(srv, 0.95):.0f} ms, max {srv[-1]:.0f} ms")
     ok = p95 < LOOKUP_BUDGET_MS
-    print("PASS" if ok else "FAIL (check the network floor above before blaming the server)")
+    print("PASS" if ok else "FAIL (round trip; compare the server's own time above: the rest is network)")
     return 0 if ok else 1
 
 

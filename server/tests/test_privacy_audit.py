@@ -256,3 +256,9 @@ def test_no_hardcoded_identifiers_in_server_code():
             if compare.search(code):
                 offenders.append(f"{f.name}:{no}: {line.strip()}")
     assert not offenders, offenders
+
+
+def test_server_timing_header_is_only_a_number():
+    """Every reply says how long the server took (for the live speed check, P5.5) and nothing else."""
+    r = client.get("/lookup?type=phone&value=9876501234")
+    assert re.fullmatch(r"app;dur=\d+\.\d", r.headers["server-timing"])

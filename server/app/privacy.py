@@ -116,4 +116,8 @@ async def safe_logging_middleware(request: Request, call_next):
     # 3) Log the normal one-liner.
     ms = (time.perf_counter() - start) * 1000
     log.info("%s %s %d %.1fms", method, path, response.status_code, ms)
+
+    # 4) Tell the caller how long WE took (standard Server-Timing header, only a number).
+    #    Why: from a laptop, the network to Render hides our own time; this shows it separately.
+    response.headers["Server-Timing"] = f"app;dur={ms:.1f}"
     return response
