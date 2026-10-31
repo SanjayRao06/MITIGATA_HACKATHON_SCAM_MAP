@@ -5,6 +5,7 @@ private.key
 licenses/
 # local data
 dev.db
+scenarios.db
 *.sqlite
 logs_raw/
 # python / node

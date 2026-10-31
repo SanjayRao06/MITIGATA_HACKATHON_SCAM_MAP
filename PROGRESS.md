@@ -10,7 +10,7 @@ a one-line explanation. Newest entry at the top.
 | 0 | Skeleton + deploy | ✅ https://mitigata-hackathon-scam-map.onrender.com |
 | 1 | Reference data + normalizer | ✅ |
 | 2 | DB + reports + naive lookup + reset | ✅ (local + Neon tested; live after push) |
-| 3 | Test harness / scenarios | ⬜ |
+| 3 | Test harness / scenarios | ✅ (29/42 checks pass; the 13 FAILs are Steps 4 + 6) |
 | 4 | Trust engine | ⬜ |
 | 5 | Licence | ⬜ |
 | 6 | Map + alerts | ⬜ |
@@ -51,6 +51,52 @@ curl -s -X POST localhost:8000/reports -H 'content-type: application/json' -d '{
 
 ---
 <!-- entries go below, newest first -->
+
+### Step 3 — Test harness / scenario runner — 2026-10-31
+**What was built (simple terms):**
+- `tools/scenarios.py`, our own copy of the judges' test tool. It wipes the server, sends ~230 realistic
+  reports (timestamps relative to now), then asks `/lookup`, `/map` and `/alerts` what they think and
+  prints a PASS/FAIL table (42 checks).
+- Attacks it tries ([PRD §4]): one person ×6 in an hour, 22 accounts on one Wi-Fi, 40 friends bombing a
+  bakery (new accounts, 2-hour burst, copy-paste/empty notes, ₹0, many home networks), and junk input.
+- Things that must still work: a real 8-person campaign (own words, 6 networks, many areas, some ₹ lost),
+  a real UPI wave, 2 real people (must stay hidden), verified numbers, never-reported numbers, 4 phone
+  formats agreeing, no reporter data in evidence, no accusing words, lookups under 500 ms.
+- Map/alerts areas: a spike area, a steady busy area, a new-scam-type area, and 30-day-old reports. Each
+  scenario uses its own pincode so they can't affect each other.
+- Every phone/UPI/reporter/IP value is random per run, so nobody can tune the server to them.
+  Safety: on a non-local `--base` it refuses to run (it would wipe live data) unless `--allow-remote-reset`.
+
+**Files touched:**
+- `tools/scenarios.py` — the runner (standard library only, no installs needed)
+- `server/tests/test_scenarios.py` — 6 tests: runner completes; junk/real/verified/small checks always PASS; remote-reset guard
+- `.gitignore` — ignore `scenarios.db` (throwaway database for runs)
+
+**How to test it (PowerShell):**
+```powershell
+cd server
+.venv\Scripts\python -m pytest -q                       # expected: 117 passed
+# start a server on a throwaway database (so dev.db is not wiped):
+$env:DATABASE_URL = "sqlite:///./scenarios.db"
+.venv\Scripts\python -m uvicorn app.main:app --port 8000 --no-access-log
+```
+In a 2nd window, from the repo root:
+```powershell
+server\.venv\Scripts\python tools\scenarios.py --base http://localhost:8000 --latency 200
+# expected now: "29/42 checks passed", exit code 1; takes ~10 s
+```
+
+**What to look for:**
+- PASS today: all junk → 400, spammer stays SUSPICIOUS (distinct 1), real campaigns → KNOWN_SCAM unmasked,
+  2 people → SUSPICIOUS masked, verified list, lookup p95 ≈ 30 ms locally.
+- FAIL today, on purpose: wifi-farm and bakery-bomb → KNOWN_SCAM (naive counting, fixed by Step 4),
+  no 429 for the spammer (Step 4), every `/map` and `/alerts` check → "HTTP 404 (not built yet)" (Step 6).
+- Goal: Step 4 turns the trust FAILs green WITHOUT turning any real-campaign row red; Step 6 does the rest.
+
+**Known gaps / next:**
+- On Windows, `localhost` costs ~2 s per request (IPv6 tried first); the runner uses `127.0.0.1` instead.
+- Don't run it against the Render URL casually: it deletes every report there.
+- Next: Step 4, the trust engine (docs/03).
 
 ### Step 2 — Database + reports + naive lookup + reset — 2026-10-31
 **What was built (simple terms):**
