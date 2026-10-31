@@ -21,6 +21,7 @@ from pathlib import Path
 from sqlalchemy import delete
 
 from app import db, reference
+from app import license as licence  # P2 licence: middleware + GET/POST /license
 from app.alerts import build_alerts
 from app.assessment import refresh_all_trusted_flags
 from app.challenges import ChallengeError, save_challenge, validate_challenge
@@ -69,7 +70,11 @@ async def lifespan(_app: FastAPI):
 
 # 4) Build the app and attach our privacy-safe request logger.
 app = FastAPI(title="Community Scam Map", version="0.2.0", lifespan=lifespan)
+# Licence check on every request (except /health, /license). Added BEFORE the logger so the logger
+# wraps it and 403s get logged too. Add CORS later with app.add_middleware: it then wraps both.
+app.middleware("http")(licence.license_middleware)
 app.middleware("http")(safe_logging_middleware)
+app.include_router(licence.router)
 
 
 @app.exception_handler(RequestValidationError)

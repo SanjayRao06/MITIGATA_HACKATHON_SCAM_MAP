@@ -6,6 +6,7 @@ licenses/
 # local data
 dev.db
 scenarios.db
+*.db
 *.sqlite
 logs_raw/
 # python / node

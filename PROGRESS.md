@@ -51,7 +51,7 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 |---|---|---|---|---|---|
 | P0 | Foundation: deploy, normalizer, DB, `/reports`, `/lookup`, `/admin/reset` | row 2, B1 | both | ✅ done & live | — |
 | P1 | Fake reports: scenarios + **trust rules** + 429 rate limit | 20 + 2 | **Avi** | ✅ all trust checks pass (35/42 overall; the 7 left are P3 map/alerts) | — |
-| P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ⬜ | start now |
+| P2 | **Licence** + 2 licence files | 15 | **Sanjay** | 🟡 code + tests done, 4 steps proven locally | upload long licence to live right after deploy |
 | P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ✅ 42/42 scenario checks (16/16 random runs) | — |
 | P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ✅ done | — |
 | P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
@@ -140,17 +140,17 @@ tests must still pass with a valid test licence loaded).
 
 ### P2 — Licence (15 pts) · read docs/05
 **Goal:** the 4-step demo works live on https with no restart.
-- [ ] 2.1 `tools/keygen.py` → `private.key` (gitignored, laptop only); paste the public key into `license.py`
-- [ ] 2.2 `tools/make_license.py --licensee "Demo Bank" --minutes 5` / `--days 30` → JSON with Ed25519 signature
-- [ ] 2.3 `license.py`: verify signature over canonical `{licensee, expires_at}`; load from DB at start
-- [ ] 2.4 Middleware on **every** request except `/health`, `/license` → expired / missing / bad / clock tampered ⇒ 403 `{"error":"LICENSE_EXPIRED"}`
-- [ ] 2.5 `GET /license` → licensee, expires_at, status, seconds_left
-- [ ] 2.6 `POST /license` → bad signature 400; good ⇒ swap in memory + save to DB, **no restart**
-- [ ] 2.7 **Never delete data** on expiry (lock only); reset keeps the licence
-- [ ] 2.8 Clock-rollback guard: remember the latest time seen; clock goes back > 2 min ⇒ treated as expired
-- [ ] 2.9 Tests: tampered date → 400; valid → 200; expired → 403 (health/license still 200); renew → 200 with data intact; rollback → 403
-- [ ] 2.10 Upload a long licence to the live server; rehearse the 4 steps live
-- [ ] 2.11 Prepare **2 licence files** for submission (5-min generated at demo time + long one)
+- [x] 2.1 `tools/keygen.py` → `private.key` (gitignored, laptop only); paste the public key into `license.py`
+- [x] 2.2 `tools/make_license.py --licensee "Demo Bank" --minutes 5` / `--days 30` → JSON with Ed25519 signature
+- [x] 2.3 `license.py`: verify signature over canonical JSON (all fields except `signature`); load from DB (re-read every 30 s)
+- [x] 2.4 Middleware on **every** request except `/health`, `/license` (+ the website's own page/files, so the expired screen can load) → expired / missing / bad / clock tampered ⇒ 403 `{"error":"LICENSE_EXPIRED"}`
+- [x] 2.5 `GET /license` → licensee, expires_at, valid, status, seconds_left, server_time
+- [x] 2.6 `POST /license` → bad signature 400; good ⇒ swap in memory + save to DB, **no restart**
+- [x] 2.7 **Never delete data** on expiry (lock only); reset keeps the licence
+- [x] 2.8 Clock-rollback guard: remember the latest time seen (memory + DB); clock goes back > 2 min ⇒ locked, even after a restart
+- [x] 2.9 Tests: tampered date → 400; valid → 200; expired → 403 (health/license still 200); renew → 200 with data intact; rollback → 403
+- [ ] 2.10 Upload a long licence to the live server; rehearse the 4 steps live (**right after the push deploys, see Done log**)
+- [x] 2.11 Prepare **2 licence files** for submission: `licenses/long.json` (Demo Bank, 1 year) + `licenses/short.json` (5 min, **regenerate at demo time**)
 **Done when:** steps 1–4 below work on the live URL.
 **Judges test (live):** ① `GET /license` shows licensee + expiry → ② upload a 5-min licence → ③ after 5 min a lookup fails and the app shows the expired screen → ④ upload a new licence → works again within a minute, old data still there ([PRD §6]).
 
@@ -332,6 +332,61 @@ what stops editing the licence date · what if the clock is set back · how is l
 
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
+
+### P2 — Licence — 2026-10-31
+**What was built (simple terms):**
+- The server now works only while it holds a signed, unexpired licence. Every request except `/health` and
+  `/license` is checked (in memory, microseconds); otherwise → 403 `{"error":"LICENSE_EXPIRED"}`. Data is never deleted.
+  The website's page (`/`) and files (`/static/…`) stay open so the expired screen can load; all its data calls are locked.
+- `GET /license` shows licensee, expiry, status (`VALID` / `EXPIRED` / `MISSING` / `CLOCK_TAMPERED`) and seconds left.
+  `POST /license` swaps in a new licence instantly (no restart) and saves it in the DB, so redeploys keep it.
+- Signing: Ed25519 (PyNaCl). The private key `private.key` stays on Sanjay's laptop (git-ignored); the server only
+  has the public key. Editing any field of a licence (date, name) → 400 `INVALID_SIGNATURE`. A genuine but already
+  expired file → 400 `LICENSE_ALREADY_EXPIRED` (current licence stays, so a stale upload can't lock the server).
+- Bonus: clock guard. The latest time seen is kept in memory and in the `clock_guard` table. If the clock goes back
+  more than 2 minutes (e.g. a year, to stretch the licence) → locked, even after a restart. Fixing the clock unlocks it.
+- Optional `LICENSE_JSON` env var: installed automatically if the DB has no licence yet.
+
+**Files touched:**
+- `server/app/license.py` — verify, middleware, GET/POST `/license`, DB sync every 30 s, clock guard
+- `server/app/main.py` — 4 lines: import, middleware, router
+- `tools/keygen.py`, `tools/make_license.py`, `tools/upload_license.py` (upload / show / `--tamper-test` / `--live`), `tools/preload_live_licence.py` (licence into Neon before push)
+- `.gitignore` — `*.db`
+- `server/tests/test_license.py` (27 tests), `server/tests/licence_testkit.py` (throwaway test key)
+- `server/tests/conftest.py` — every test starts with a valid test licence (all other tests still pass)
+
+**How to test it (PowerShell, repo root):**
+```powershell
+cd server; .venv\Scripts\python -m pytest -q; cd ..     # expected: 207 passed
+# local server on a throwaway DB (2nd window):  cd server; $env:DATABASE_URL="sqlite:///./scenarios.db"; .venv\Scripts\python -m uvicorn app.main:app --no-access-log
+$P = "server\.venv\Scripts\python"
+& $P tools\upload_license.py --show                     # status MISSING; any lookup -> 403
+& $P tools\upload_license.py licenses\long.json         # step 1: VALID, "Demo Bank"
+& $P tools\make_license.py --licensee "Demo Bank" --minutes 1 --out licenses\short.json
+& $P tools\upload_license.py licenses\short.json        # step 2: seconds_left ~60
+# step 3: after 1 min -> curl.exe "http://127.0.0.1:8000/lookup?type=phone&value=1930"  -> 403 LICENSE_EXPIRED
+& $P tools\upload_license.py licenses\long.json         # step 4: VALID again, old data still there
+```
+Proven locally 2026-10-31: all 4 steps, tampered date → 400, and `scenarios.py` 42/42 behind the licence.
+
+Tamper check in one command (expected `PASS`): `& $P tools\upload_license.py licenses\long.json --tamper-test`
+
+**Going live (no lock window):** the new code locks every request until a licence exists, so put the licence
+into Neon **before** pushing; the new server reads it on its first request:
+```powershell
+& $P tools\preload_live_licence.py            # once, before git push (writes only the `license` row)
+git push                                       # Render redeploys
+& $P tools\upload_license.py --show --live    # after deploy: VALID, Demo Bank
+& $P tools\upload_license.py licenses\long.json --tamper-test --live   # PASS
+```
+Licence files aren't secret (they're signed, not encrypted), but the private key is. Back up `private.key` safely;
+without it nobody can make new licences.
+
+**For the frontend (Avi):** the expired screen already works with this (403 `LICENSE_EXPIRED` → screen; it recovers
+once a data call succeeds). If you add new website paths outside `/` and `/static/`, add them to `OPEN_PATHS` /
+`OPEN_PREFIXES` in `license.py`. Any CORS should be added with `app.add_middleware` so it wraps the licence check.
+
+**Known gaps / next:** 2.10 live upload + rehearsal on the https URL; licence section of the README (P8).
 
 ### P6 — Website (all pages, EN/HI, phone + laptop) — 2026-10-31
 **What was built (simple terms):**
