@@ -96,7 +96,7 @@ tests must still pass with a valid test licence loaded).
 | 2 | Lookup right answer; all formats match; < 0.5 s | 15 | Test tool | P0 ✅, P1, P5 | ✅ |
 | 3 | Map + alerts: spike → alert, normal → none, new type → alert, month-old not on map | 10 | Test tool | P3 | ✅ |
 | 4 | Privacy: < 3 reporters hidden, map never shows a person's location, careful wording. **Reporter identifiable = disqualified** | 15 | Test tool + judge | P0 ✅, P5, P6 | backend ✅ |
-| 5 | Server + licence: 4-step live demo on https, **no restart** | 15 | Judge | P2 | ❌ |
+| 5 | Server + licence: 4-step live demo on https, **no restart** | 15 | Judge | P2 | ✅ |
 | 6 | Easy to report: phone + stopwatch < 60 s; works in **Hindi or icons only**; **no login** | 15 | Judge | P6 | 🟡 built, not yet timed on a phone |
 | 7 | Demo + code: runs from README; trust rules + licence explained; pitch | 10 | Judge | P8 | ❌ |
 | B1 | Verified businesses/helplines → "Verified business" | +3 | Test tool | P0 | ✅ |
