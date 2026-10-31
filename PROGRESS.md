@@ -54,7 +54,7 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 |---|---|---|---|---|---|
 | P0 | Foundation: deploy, normalizer, DB, `/reports`, `/lookup`, `/admin/reset` | row 2, B1 | both | ✅ done & live | — |
 | P1 | Fake reports: scenarios + **trust rules** + 429 rate limit | 20 + 2 | **Avi** | ✅ all trust checks pass (35/42 overall; the 7 left are P3 map/alerts) | — |
-| P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ✅ done on live (2026-11-01: 5-min licence locked live with 403, long licence unlocked it with no restart; long valid until 2027-10-31) | watch the website auto-lock once on live; README licence section (P8) |
+| P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ✅ done on live (2026-11-01: lock with 403, unlock with no restart, website auto-locks without reload; long valid until 2027-10-31) | README licence section (P8); make the 5-min file fresh on demo day |
 | P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ✅ 42/42 scenario checks (16/16 random runs) | — |
 | P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ✅ done | — |
 | P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
@@ -321,6 +321,8 @@ what stops editing the licence date · what if the clock is set back · how is l
 | Disputes don't lower reporters' reputation | Anyone can file a dispute (no approval step), so a scammer could punish honest reporters. Only an upheld dispute should, and we have no review step |
 | A dispute never clears a number | It only softens the label to "under review"; reports and counts stay visible |
 | Sarvam (AI) only as an optional phone-side extra | Trust rules must be our own and explainable; outside calls are slow/fragile |
+| Server refuses an already-expired licence (`LICENSE_ALREADY_EXPIRED`) | An expired file must never unlock anything; the 5-min demo file is made fresh right before the demo |
+| Website checks `/license` every 15 s + a timer for the expiry second | The page locks by itself when the licence ends, no click or reload needed |
 
 ---
 
@@ -339,6 +341,25 @@ what stops editing the licence date · what if the clock is set back · how is l
 
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
+
+### P2 — Licence finished on live — 2026-11-01
+**What was built (simple terms):**
+- The expired screen no longer shows a "Call 1930" button (1930 is for scam victims, not licence errors).
+- The website watches the licence by itself (`watchLicence()` in `server/web/app.js`): it asks `/license`
+  every 15 s and sets a timer for the exact expiry second, so an open page locks without a reload.
+- Proven on the live https server: a 5-minute licence locked the API (403 LICENSE_EXPIRED), the long
+  licence unlocked it with no restart, and the website locked and recovered by itself (checked by Avi).
+- Decision: an already-expired licence is always refused.
+
+**Files touched:** `server/web/index.html`, `server/web/app.js`, `PROGRESS.md`
+
+**How to test it** (PowerShell, project root, `$P = "server\.venv\Scripts\python"`):
+```powershell
+& $P tools\make_license.py --licensee "Demo Bank" --minutes 5 --out licenses\short.json
+& $P tools\upload_license.py licenses\short.json --live   # leave the site open: it locks by itself at expiry
+& $P tools\upload_license.py licenses\long.json --live    # always finish with this; screen clears in ~20 s
+```
+**Known gaps / next:** README licence section (P8).
 
 ### P6 round 2 — Website feedback fixes — 2026-11-01
 **What was built (simple terms):**
