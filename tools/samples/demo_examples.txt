@@ -1,0 +1,185 @@
+COMMUNITY SCAM MAP - SAMPLE REQUESTS FOR /docs
+================================================
+Where:  http://localhost:8000/docs   (or https://mitigata-hackathon-scam-map.onrender.com/docs)
+How:    POST /reports -> Try it out -> paste ONE body below -> Execute -> read "Server response"
+        GET /lookup   -> Try it out -> fill "type" and "value" -> Execute
+
+RULES
+- Send each report ONCE (each has its own report_id; the same report_id twice counts once).
+- Times must be in the PAST (future -> 400). If you use this on another day, change the
+  date in "occurred_at" / "reported_at" to that day (keep the time earlier than now).
+- Start with:  POST /admin/reset  -> Execute
+- On the LIVE server, finish with POST /admin/reset again.
+
+
+------------------------------------------------
+EXAMPLE 1 - Real scam reported by 3 different people (3 number formats, same case)
+------------------------------------------------
+
+Report A (Ravi, HSR Layout)  -> expect 201, merged: false, note the case_id
+{
+  "report_id": "rep_001",
+  "occurred_at": "2026-10-31T10:00:00+05:30",
+  "reported_at": "2026-10-31T10:20:00+05:30",
+  "reporter_id": "r_ravi01",
+  "ip_prefix": "103.21.58",
+  "channel": "Phone call",
+  "scam_type": "digital-arrest",
+  "identifier_type": "phone",
+  "identifier_value": "+91 98765 43210",
+  "pincode": "560102",
+  "locality": "HSR Layout",
+  "city": "Bengaluru",
+  "note": "Video call from a man in police uniform saying a parcel with drugs was in my name",
+  "has_screenshot": true,
+  "amount_lost_inr": 0
+}
+
+Report B (Priya, Koramangala, different format)  -> expect 201, merged: true, SAME case_id
+{
+  "report_id": "rep_002",
+  "occurred_at": "2026-10-31T11:15:00+05:30",
+  "reported_at": "2026-10-31T11:30:00+05:30",
+  "reporter_id": "r_priya02",
+  "ip_prefix": "49.36.12",
+  "channel": "Phone call",
+  "scam_type": "digital-arrest",
+  "identifier_type": "phone",
+  "identifier_value": "09876543210",
+  "pincode": "560034",
+  "locality": "Koramangala",
+  "city": "Bengaluru",
+  "note": "They kept me on video for 2 hours and asked for money to close the case",
+  "has_screenshot": false,
+  "amount_lost_inr": 50000
+}
+
+Report C (Amit, Indiranagar, another format)  -> expect 201, merged: true, SAME case_id
+{
+  "report_id": "rep_003",
+  "occurred_at": "2026-10-31T12:40:00+05:30",
+  "reported_at": "2026-10-31T13:00:00+05:30",
+  "reporter_id": "r_amit03",
+  "ip_prefix": "117.99.4",
+  "channel": "Phone call",
+  "scam_type": "digital-arrest",
+  "identifier_type": "phone",
+  "identifier_value": "98765-43210",
+  "pincode": "560038",
+  "locality": "Indiranagar",
+  "city": "Bengaluru",
+  "note": "Mujhe bola arrest warrant hai, Skype pe aao",
+  "has_screenshot": false,
+  "amount_lost_inr": 0
+}
+
+LOOKUP   type = phone   value = 9876543210
+  after A        -> SUSPICIOUS, distinct_reporters 1, display_value 98XXXXX210 (hidden)
+  after A+B      -> SUSPICIOUS, distinct_reporters 2, still 98XXXXX210
+  after A+B+C    -> KNOWN_SCAM, distinct_reporters 3, display_value +919876543210 (shown)
+  Try other formats too: +91 98765 43210 / 09876543210 / 919876543210 -> same answer
+
+
+------------------------------------------------
+EXAMPLE 2 - Spammer: ONE person reports the same number many times
+------------------------------------------------
+Send this, then send it again with report_id changed to rep_011, then rep_012.
+(reporter_id stays the same -> same person)  -> each 201, same case_id
+{
+  "report_id": "rep_010",
+  "occurred_at": "2026-10-31T13:00:00+05:30",
+  "reported_at": "2026-10-31T13:05:00+05:30",
+  "reporter_id": "r_angry99",
+  "ip_prefix": "1.2.3",
+  "channel": "SMS or WhatsApp",
+  "scam_type": "lottery-prize",
+  "identifier_type": "phone",
+  "identifier_value": "9123456780",
+  "pincode": "560066",
+  "locality": "Whitefield",
+  "city": "Bengaluru",
+  "note": "scam",
+  "has_screenshot": false,
+  "amount_lost_inr": 0
+}
+
+LOOKUP   type = phone   value = 9123456780
+  -> report_count 3, distinct_reporters 1, SUSPICIOUS, hidden 91XXXXX780  (one person counts once)
+
+
+------------------------------------------------
+EXAMPLE 3 - UPI ID
+------------------------------------------------
+{
+  "report_id": "rep_020",
+  "occurred_at": "2026-10-31T09:30:00+05:30",
+  "reported_at": "2026-10-31T09:45:00+05:30",
+  "reporter_id": "r_neha20",
+  "ip_prefix": "59.88.1",
+  "channel": "UPI request",
+  "scam_type": "upi-refund-qr",
+  "identifier_type": "upi",
+  "identifier_value": "Refund.Help@OKAXIS",
+  "pincode": "560076",
+  "locality": "BTM Layout",
+  "city": "Bengaluru",
+  "note": "Said scan this QR to receive refund, money went out instead",
+  "has_screenshot": true,
+  "amount_lost_inr": 4999
+}
+
+LOOKUP   type = upi   value = refund.help@okaxis
+  -> SUSPICIOUS, display_value r***@okaxis
+
+
+------------------------------------------------
+EXAMPLE 4 - Fake bank link
+------------------------------------------------
+{
+  "report_id": "rep_030",
+  "occurred_at": "2026-10-31T08:00:00+05:30",
+  "reported_at": "2026-10-31T08:30:00+05:30",
+  "reporter_id": "r_kiran30",
+  "ip_prefix": "106.51.7",
+  "channel": "Fake website",
+  "scam_type": "fake-kyc-link",
+  "identifier_type": "url",
+  "identifier_value": "http://www.sbi-kyc.in/pay?utm=sms",
+  "pincode": "560011",
+  "locality": "Jayanagar",
+  "city": "Bengaluru",
+  "note": "SMS said KYC expired, link looked exactly like SBI",
+  "has_screenshot": true,
+  "amount_lost_inr": 0
+}
+
+LOOKUP   type = url   value = sbi-kyc.in/pay
+  -> SUSPICIOUS, display_value sbi***.in/...
+
+
+------------------------------------------------
+EXAMPLE 5 - Verified numbers (no report needed)
+------------------------------------------------
+LOOKUP   type = phone       value = 1800 1600           -> VERIFIED_BUSINESS (HDFC Bank)
+LOOKUP   type = phone       value = 1930                -> VERIFIED_BUSINESS (Cybercrime Helpline)
+LOOKUP   type = sender_id   value = VM-HDFCBK           -> VERIFIED_BUSINESS
+LOOKUP   type = upi         value = freshbakes@okaxis   -> VERIFIED_BUSINESS (Fresh Bakes)
+
+
+------------------------------------------------
+EXAMPLE 6 - Things that must FAIL / edge cases
+------------------------------------------------
+LOOKUP   type = phone   value = 12345        -> 400 (junk)
+LOOKUP   type = phone   value = 9000000001   -> 200 NO_REPORTS (valid, never reported - not 404)
+
+POST Report A again but change these lines:
+  "report_id": "rep_x1",  "identifier_value": "test"      -> 400 invalid identifier_value
+  "report_id": "rep_x2",  "pincode": "999999"             -> 400 unknown pincode
+  "report_id": "rep_x3",  "occurred_at": "2027-01-01T10:00:00+05:30"  -> 400 occurred_at is in the future
+  "report_id": "rep_x4",  "scam_type": "alien-attack"     -> 201 (accepted, saved as "other")
+
+
+------------------------------------------------
+FINISH
+------------------------------------------------
+POST /admin/reset -> Execute   (always on the live server)
