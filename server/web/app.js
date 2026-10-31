@@ -117,9 +117,34 @@ function showExpired() {
   showExpired._poll = setInterval(async () => {
     try {
       const res = await fetch("/alerts?pincode=560102");
-      if (res.ok) { clearInterval(showExpired._poll); box.hidden = true; router(); }
+      if (res.ok) { clearInterval(showExpired._poll); box.hidden = true; router(); watchLicence(); }
     } catch { /* still offline */ }
   }, 20000);
+}
+
+/**
+ * Licence watcher: lock the page the moment the licence ends, even if nobody clicks anything.
+ * In: nothing. Out: nothing (it re-schedules itself).
+ * Why: without it the expired screen only appears on the next request that gets a 403.
+ * How: ask GET /license (always answers, never locked) every 15 s, and also set a timer for the
+ * exact expiry second it reports, so the lock is on time and a newly uploaded licence (e.g. a
+ * short demo one replacing the long one) is picked up within 15 s.
+ */
+async function watchLicence() {
+  clearTimeout(watchLicence._next);
+  clearTimeout(watchLicence._expiry);
+  let wait = 15000;
+  try {
+    const res = await fetch("/license", { cache: "no-store" });
+    const lic = res.ok ? await res.json() : null;
+    if (lic && !lic.valid) { showExpired(); return; }        // expired: lock now (recovery is in showExpired)
+    if (lic && lic.seconds_left != null) {
+      // Timer for the exact end (+1 s so the server agrees it has passed).
+      const ms = (lic.seconds_left + 1) * 1000;
+      if (ms < 2 ** 31) watchLicence._expiry = setTimeout(watchLicence, ms);
+    }
+  } catch { /* offline: try again later */ }
+  watchLicence._next = setTimeout(watchLicence, wait);
 }
 
 /* ================================================================ static text + icons */
@@ -949,3 +974,4 @@ function pageMore() {
 applyStatic();
 getMeta().catch(() => {});   // warm the area list in the background
 router();
+watchLicence();              // lock the page by itself when the licence ends
