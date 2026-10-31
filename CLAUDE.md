@@ -29,7 +29,6 @@ missing real scams, (2) a live licence demo that locks/unlocks the server withou
 | `docs/05-license.md` | licence signing, middleware, /license, clock rollback |
 | `docs/06-map-alerts.md` | /map, /alerts, time windows, severity |
 | `docs/07-frontend.md` | any app screen |
-| `docs/08-implementation-plan.md` | older step plan, kept for detail only. **The current plan and order are in PROGRESS.md** |
 | `docs/09-demo-script.md` | rehearsing / preparing judging day |
 | `docs/11-stitch-prompts.md` | designing or building any frontend page: palette, style, page list, Stitch prompts |
 | `docs/10-working-agreement.md` | **every session**: how to report to the user after each feature or bug fix |
@@ -66,7 +65,7 @@ missing real scams, (2) a live licence demo that locks/unlocks the server withou
    2. **Run it yourself**: copy-paste commands to start the server and try the feature, with expected output.
    3. **Code walkthrough**: very brief. Name each file/function and say in one line how it works. Not line by line.
    4. **How the judges will test it**: what the test tool or judge sends, and what must come back (cite [PRD §…]).
-   5. **Where we are**: the step from docs/08, done / in progress, and what's next.
+   5. **Where we are**: the phase in PROGRESS.md, done / in progress, and what's next.
    For **bug fixes only**: skip all that. Say what was wrong, what changed, and give a one-line code overview.
 
 ## Commands
@@ -98,7 +97,7 @@ server/                     everything Render runs (its root dir), so a push her
   app/timeutil.py           UTC inside, IST (+05:30) in replies
   web/                      the website (index.html, app.js, i18n.js, icons.js, app.css), served at "/"
   tests/                    pytest per module (+ licence_testkit.py: throwaway test key)
-tools/                      scenarios.py (attack + real-scam checks), keygen / make / upload / preload licence
+tools/                      scenarios.py (attack + real-scam checks), keygen / make / upload licence
 tools/samples/              demo_examples.txt (copy-paste examples for /docs)
 licenses/        (ignored)  long.json, short.json: signed licence files (never the private key)
 _local/          (ignored)  laptop-only files, e.g. raw Stitch exports

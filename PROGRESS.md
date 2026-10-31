@@ -37,10 +37,13 @@ cd "C:\Users\Avi Verma\Documents\Code\Scam_Map\server"
 .venv\Scripts\python -m pytest -q                                      # all tests
 .venv\Scripts\python -m uvicorn app.main:app --reload --no-access-log  # server on :8000
 ```
-**Run the attack scenarios** (server started with `$env:DATABASE_URL="sqlite:///./scenarios.db"`), from the repo root:
+**One local server, one database (`dev.db`), with demo data in it.** Load or refresh the demo data from the
+repo root. This WIPES dev.db's reports (the licence stays), then you add your own reports on top:
 ```powershell
-server\.venv\Scripts\python tools\scenarios.py --base http://localhost:8000 --latency 200
+server\.venv\Scripts\python tools\scenarios.py --seed 7     # 46/46 + "Try these on the website" list
 ```
+(`--seed 7` = same numbers every time. A first run on a fresh dev.db needs the licence once:
+`server\.venv\Scripts\python tools\upload_license.py licenses\long.json`.)
 **Git routine:** `git pull` before you start → work → `git add . ; git commit -m "..." ; git push`.
 Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (already gitignored).
 

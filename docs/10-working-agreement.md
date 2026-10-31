@@ -11,7 +11,7 @@ Report in **short, simple terms**, in this order:
    one line how it works. Not line by line; the user doesn't want to spend long on this.
 4. **How the judges will test it**: what the test tool or judge sends, and what must come back
    (cite `[PRD §…]` from `docs/00-prd.md`).
-5. **Where we are**: the exact status in `docs/08-implementation-plan.md` (done / in progress / next).
+5. **Where we are**: the exact status in `PROGRESS.md` (done / in progress / next).
 
 Also update `PROGRESS.md` (see CLAUDE.md "How to work").
 
