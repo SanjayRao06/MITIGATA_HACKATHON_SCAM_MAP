@@ -2,7 +2,7 @@
 
 Run it with `uvicorn app.main:app --reload --no-access-log` from the `server/` folder.
 Endpoints so far (contract in docs/01, source of truth [PRD §A]):
-  GET /health, POST /reports, GET /lookup, GET /map, GET /alerts, POST /admin/reset
+  GET /health, POST /reports, GET /lookup, GET /map, GET /alerts, POST /challenges, POST /admin/reset
   GET /debug/explain (only when the EXPLAIN_ENABLED env var is "1"; shows the trust rules' working)
 Later steps add /map, /alerts, /challenges and /license (see docs/08-implementation-plan.md).
 """
@@ -20,6 +20,7 @@ from sqlalchemy import delete
 from app import db, reference
 from app.alerts import build_alerts
 from app.assessment import refresh_all_trusted_flags
+from app.challenges import ChallengeError, save_challenge, validate_challenge
 from app.geo import DEFAULT_DAYS, DEFAULT_RADIUS_KM, MAX_DAYS, MAX_RADIUS_KM, build_map
 from app.lookup import explain, lookup
 from app.normalize import IDENTIFIER_TYPES, InvalidIdentifier, normalize
@@ -186,6 +187,31 @@ def get_alerts(pincode: str | None = None):
     if pincode is not None and reference.get_area(pincode) is None:
         return bad_request("unknown pincode")
     return {"alerts": build_alerts(pincode.strip() if pincode else None)}
+
+
+# Example shown (and editable) in the /docs page, copied from [PRD §A.7].
+CHALLENGE_EXAMPLE = {
+    "identifier_type": "phone",
+    "identifier_value": "+91 80 4100 2233",
+    "claimant_name": "Fresh Bakes",
+    "contact_email": "owner@example.com",
+    "proof_note": "GST certificate and shop licence attached.",
+}
+
+
+@app.post("/challenges", status_code=201)
+async def post_challenge(body: dict = Body(..., openapi_examples={
+        "challenge": {"summary": "A bakery disputes its number", "value": CHALLENGE_EXAMPLE}})):
+    """A business disputes a number ([PRD §A.7], bonus).
+
+    Out: 201 {challenge_id, status: "under_review"}, or 400 {"error"}. Afterwards /lookup shows
+    challenged=true and never KNOWN_SCAM for that number. Claimant details are never returned.
+    """
+    try:
+        clean = validate_challenge(body)
+    except ChallengeError as exc:
+        return bad_request(str(exc))
+    return await run_in_threadpool(save_challenge, clean)
 
 
 # The explain endpoint is for demos and debugging. It only shows counts and scores (no ids, no

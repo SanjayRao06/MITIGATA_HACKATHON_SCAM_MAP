@@ -53,9 +53,9 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 | P1 | Fake reports: scenarios + **trust rules** + 429 rate limit | 20 + 2 | **Avi** | ✅ all trust checks pass (35/42 overall; the 7 left are P3 map/alerts) | — |
 | P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ⬜ | start now |
 | P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ✅ 42/42 scenario checks (16/16 random runs) | — |
-| P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ⬜ | next |
+| P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ✅ done | — |
 | P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
-| P6 | **Frontend** (Report, Lookup, Map heatmap, Expired screen) + **Hindi + icons** | 15 | **San** | ⬜ | start after P2 (or in parallel) |
+| P6 | **Frontend** (Report, Lookup, Map heatmap, Expired screen) + **Hindi + icons** | 15 | **Avi** | 🟡 designing in Google Stitch | waiting for Stitch export |
 | P7 | **Ops**: keep-awake, frontend deploy, live run of all scenarios | protects all | **Sanjay** | ⬜ | UptimeRobot anytime |
 | P8 | **README + video + pitch + rehearsal** | 10 | **both** (split below) | ⬜ | grows as we go; finish last |
 | P9 | Extras: Hindi voice (Sarvam), explain panel, lookalike domains, QR | tie-break | whoever is free | ⬜ | only if time |
@@ -69,9 +69,9 @@ Then P3, P4, P5 close the API. P6 runs in parallel against the live API. P7 befo
 ### Team split: two groups that can work independently
 | | **Group A: Avi, "server brain"** | **Group B: Sanjay, "licence, app and delivery"** |
 |---|---|---|
-| Phases | P1 trust rules + 429 · P3 map + alerts · P4 disputes · P5 privacy/speed audit | P2 licence · P6 frontend + Hindi + icons · P7 ops · P8 video + rehearsal lead |
+| Phases | P1 trust rules + 429 · P3 map + alerts · **P6 frontend + Hindi + icons** · P4 disputes · P5 privacy/speed audit | P2 licence · P7 ops · P8 video + rehearsal lead |
 | Points | 20 + 10 + 15 (privacy) + 2 + 2 + 3 (done) | 15 + 15 + 10 (README/pitch shared) |
-| Files you own | `server/app/trust.py`, `lookup.py`, `reports.py`, `geo.py`, `alerts.py`, `challenges` code; their tests; `tools/scenarios.py` updates | `server/app/license.py`, `tools/keygen.py`, `tools/make_license.py`, `licenses/` (gitignored), everything in `web/`, Render + UptimeRobot settings |
+| Files you own | `server/app/trust.py`, `lookup.py`, `reports.py`, `geo.py`, `alerts.py`, `challenges` code, **everything in `web/`**; their tests; `tools/scenarios.py` updates | `server/app/license.py`, `tools/keygen.py`, `tools/make_license.py`, `licenses/` (gitignored), Render + UptimeRobot settings |
 | README sections | Trust rules + attack table, privacy, map/alerts, API examples | Licence + 4-step demo, run instructions, frontend, architecture, pitch |
 **Why this split works:** the API shapes are fixed by the PRD, so Sanjay can build the app against the
 live server today without waiting. Licence code lives in its own file. The only shared file is
@@ -97,7 +97,7 @@ tests must still pass with a valid test licence loaded).
 | 6 | Easy to report: phone + stopwatch < 60 s; works in **Hindi or icons only**; **no login** | 15 | Judge | P6 | ❌ |
 | 7 | Demo + code: runs from README; trust rules + licence explained; pitch | 10 | Judge | P8 | ❌ |
 | B1 | Verified businesses/helplines → "Verified business" | +3 | Test tool | P0 | ✅ |
-| B2 | Dispute feature | +2 | Test tool | P4 | ❌ |
+| B2 | Dispute feature | +2 | Test tool | P4 | ✅ |
 | B3 | Fake reports never set off an alert | +2 | Test tool | P1 + P3 | ✅ |
 **Tie-break:** more bonus points, then **faster report time** (P6 counts twice).
 **Automatic disqualification:** reporter identifiable · exact locations stored · personal data scraped · code written before the event.
@@ -129,7 +129,7 @@ tests must still pass with a valid test licence loaded).
 - [x] 1.5 **L2 same network:** same `ip_prefix` hash + same number + within 24 h → 1 effective person
 - [x] 1.6 **L3 notes:** normalize text; near-duplicate notes (3-word shingles, Jaccard ≥ 0.8) merge into one source; empty ×1.0, generic short ("scam") ×0.8, personal ≥ 8 words ×1.2
 - [x] 1.7 **L4 coordination score** (last 48 h): burst, newness, low network/area/text diversity, no loss + no screenshot → ≥ 0.6 ⇒ new accounts ×0.2 and KNOWN_SCAM blocked
-- [x] 1.8 **L5 reputation:** new 0.6 → proven up to 1.0; reporters of verified/disputed numbers 0.3
+- [x] 1.8 **L5 reputation:** new 0.6 → proven up to 1.0; reporters of verified numbers 0.3
 - [x] 1.9 **Verdict:** KNOWN_SCAM needs effective ≥ 3.0 AND ≥ 3 distinct networks AND coordination < 0.6 AND not challenged; `distinct_reporters` = people after trust rules (drives masking)
 - [x] 1.10 Store a per-report **`trusted`** flag (feeds P3 map/alerts)
 - [x] 1.11 Fix: duplicate `report_id` counts as a retry only if reporter + identifier also match
@@ -167,11 +167,11 @@ tests must still pass with a valid test licence loaded).
 **Judges test:** spike area → SPIKE; steady area → none; new scam type → NEW_TYPE; 30-day-old reports absent from `/map`.
 
 ### P4 — Disputes (+2 bonus) · read docs/01 §7
-- [ ] 4.1 `POST /challenges`: normalize identifier (junk → 400), require claimant name + email, create case if new
-- [ ] 4.2 Save challenge (`under_review`), set `challenged = true` → 201 `{challenge_id, status:"under_review"}`
-- [ ] 4.3 Lookup: `challenged: true`, never KNOWN_SCAM (downgrade to SUSPICIOUS), message "A business disputed these reports - under review"; verified stays verified
-- [ ] 4.4 Claimant name/email/proof never logged or returned
-- [ ] 4.5 Tests (KNOWN_SCAM → challenge → SUSPICIOUS + challenged)
+- [x] 4.1 `POST /challenges`: normalize identifier (junk → 400), require claimant name + email, create case if new
+- [x] 4.2 Save challenge (`under_review`), set `challenged = true` → 201 `{challenge_id, status:"under_review"}`
+- [x] 4.3 Lookup: `challenged: true`, never KNOWN_SCAM (downgrade to SUSPICIOUS), message "A business disputed these reports - under review"; verified stays verified
+- [x] 4.4 Claimant name/email/proof never logged or returned
+- [x] 4.5 Tests (KNOWN_SCAM → challenge → SUSPICIOUS + challenged)
 **Judges test:** challenge a number, then lookup shows `challenged: true` and isn't KNOWN_SCAM ([PRD §A.7]).
 
 ### P5 — Privacy + speed audit (protects 15 + 15) · read docs/04
@@ -185,7 +185,13 @@ tests must still pass with a valid test licence loaded).
 
 ### P6 — Frontend + Hindi + icons (15 pts + tie-break) · read docs/07 · can start now in parallel
 **Goal:** a judge reports a scam on a phone in < 60 s (target < 30 s), also in Hindi or icons only, no login.
-- [ ] 6.1 Design screens in **Google Stitch** (Home, Report, Lookup, Map, Expired), phone width 360–414 px, tap targets ≥ 48 px
+**Design decisions (2026-10-31):** palette **Sage & Cream**: bg `#F6F1E4`, cards `#FFFDF7`, primary sage `#4F6F52`,
+accent gold `#C9A227`, text `#22302A`, borders `#E5DECC`; results red `#B5452F` / amber `#D99A1E` / grey `#8A8577` /
+verified `#2E8B57`. Style **clean civic** (flat, thin borders, radius 12, line icons, no gradients). Fonts: Fraunces/Literata
+headings, Source Sans 3 body, Noto Sans Devanagari. **Responsive** (phone + laptop). Pages: Home, Report, Check,
+Map, Dashboard, Safety guide, How it works & privacy, Business dispute, Licence expired.
+Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
+- [ ] 6.1 Design screens in **Google Stitch** (9 pages, mobile + desktop) using `docs/11-stitch-prompts.md`; export to `web/stitch/`
 - [ ] 6.2 Project setup in `web/` (Vite + React or plain JS); API base URL in one config constant
 - [ ] 6.3 **i18n from day one:** `en.json` + `hi.json`, every visible string from them; EN | हिंदी toggle
 - [ ] 6.4 **Home:** two big buttons (Check a number / Report a scam) + helpline strip (1930 tel: link, cybercrime.gov.in)
@@ -200,6 +206,8 @@ tests must still pass with a valid test licence loaded).
 - [ ] 6.13 Serve the built site from our server (or Vercel/Netlify) and test on a real phone on mobile data
 - [ ] 6.14 If the site is hosted separately from the API: enable CORS on the server for that site's address only
 - [ ] 6.15 `ip_prefix` for real app users: the browser can't know it, so send `"web"` and let the server derive the first 3 parts of the caller's IP **and hash it immediately** (test tool keeps sending its own)
+- [ ] 6.17 Dashboard page + small stats endpoint (`GET /stats`: 7-day totals, per-day counts, top types, top areas)
+- [ ] 6.18 Safety guide, How it works & privacy, Business dispute pages (dispute form posts to P4 `/challenges`)
 - [ ] 6.16 Safety-advice text per scam type in `en.json` + `hi.json` (e.g. "Police never arrest anyone on a video call", "Banks never ask for your OTP", "Receiving money never needs a PIN or QR scan")
 **Done when:** stopwatch < 60 s on a real phone in English, Hindi and icons-only; expired screen appears on 403.
 **Judges test:** they report on a phone with a stopwatch, then again in Hindi or using only icons (> 2 min or a login before the form = 0).
@@ -303,6 +311,8 @@ what stops editing the licence date · what if the clock is set back · how is l
 | Use the PRD's 12 scam types, no new categories | The test tool sends exactly those; UI may group them |
 | Leaflet + OpenStreetMap instead of Google Maps | Google Maps needs billing; same look with a light style |
 | Hindi + icons built into the frontend from the start | Required for full marks in row 6, not optional |
+| Disputes don't lower reporters' reputation | Anyone can file a dispute (no approval step), so a scammer could punish honest reporters. Only an upheld dispute should, and we have no review step |
+| A dispute never clears a number | It only softens the label to "under review"; reports and counts stay visible |
 | Sarvam (AI) only as an optional phone-side extra | Trust rules must be our own and explainable; outside calls are slow/fragile |
 
 ---
@@ -322,6 +332,41 @@ what stops editing the licence date · what if the clock is set back · how is l
 
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
+
+### P4 — Disputes (POST /challenges) — 2026-10-31
+**What was built (simple terms):**
+- `POST /challenges`: a business says "that's our real number".
+  - It checks the identifier (any format; junk → 400), a business name and an email (missing or invalid → 400).
+  - It saves the dispute as `under_review`, marks the number as challenged, and replies
+    `201 {"challenge_id": "chal_N", "status": "under_review"}`.
+  - It works even if nobody has reported the number yet.
+- `/lookup` on a disputed number: `"challenged": true` and **never KNOWN_SCAM** (SUSPICIOUS instead), with the
+  message "A business has disputed these reports - under review". Reports are kept. Verified numbers stay verified.
+- Claimant name, email and proof are never logged or returned. `/admin/reset` clears disputes.
+- Decision: disputes do **not** lower reporters' reputation. Anyone can file one (there's no approval step),
+  so it would let a scammer punish honest reporters.
+
+**Files touched:**
+- `server/app/challenges.py` (new): `validate_challenge()` + `save_challenge()`
+- `server/app/main.py`: `POST /challenges` route with an editable example in `/docs`
+- `server/tests/test_challenges.py` (new, 14 tests)
+- `tools/samples/demo_examples.txt`: Example 8 (dispute by hand)
+
+**How to test it (PowerShell):**
+```powershell
+cd "C:\Users\Avi Verma\Documents\Code\Scam_Map\server"
+.venv\Scripts\python -m pytest -q                       # expected: 168 passed
+.venv\Scripts\python -m uvicorn app.main:app --reload --no-access-log
+```
+In `http://localhost:8000/docs`:
+1. Send Example 1 (3 reports).
+2. `GET /lookup` 9876543210 → KNOWN_SCAM.
+3. `POST /challenges` with Example 8.
+4. `GET /lookup` again → SUSPICIOUS + `challenged: true`.
+
+**Known gaps / next:**
+- No admin screen to approve or reject disputes (status stays `under_review`). That's enough for [PRD §A.7].
+- Next: `/stats` for the dashboard, frontend plumbing (P6), P5 audit.
 
 ### P3 — Map + alerts — 2026-10-31
 **What was built (simple terms):**

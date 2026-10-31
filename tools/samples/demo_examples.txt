@@ -213,6 +213,27 @@ week before. That is easiest to see with:  python tools/scenarios.py --base http
 
 
 ------------------------------------------------
+EXAMPLE 8 - DISPUTE (POST /challenges)  "that is our real number"
+------------------------------------------------
+First make Example 1 (3 people) so the number is KNOWN_SCAM, then:
+POST /challenges
+{
+  "identifier_type": "phone",
+  "identifier_value": "09876543210",
+  "claimant_name": "Sharma Sweets",
+  "contact_email": "owner@example.com",
+  "proof_note": "GST certificate and shop licence attached."
+}
+-> 201 {"challenge_id": "chal_1", "status": "under_review"}
+
+LOOKUP   type = phone   value = 9876543210
+  -> "challenged": true, verdict SUSPICIOUS (never KNOWN_SCAM while under review),
+     message "A business has disputed these reports - under review", report_count still 3
+Bad disputes -> 400: "identifier_value": "12345" / "claimant_name": "" / "contact_email": "not-an-email"
+Verified numbers stay VERIFIED_BUSINESS even if disputed.
+
+
+------------------------------------------------
 FINISH
 ------------------------------------------------
 POST /admin/reset -> Execute   (always on the live server)

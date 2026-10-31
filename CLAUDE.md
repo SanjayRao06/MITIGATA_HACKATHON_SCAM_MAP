@@ -3,7 +3,7 @@
 Read this file first, every session. It tells you what we are building, the rules you must
 never break, and how to work. Topic details live in `docs/` — open only the one you need.
 
-## What we are building (one paragraph
+## What we are building (one paragraph)
 A server + mobile website where people report scam phone numbers, UPI IDs, links and SMS
 senders, and look one up before trusting it. A judges' test tool hits our 7 API endpoints
 with secret data full of fake reports. We win on: (1) trust rules that stop fakes without
@@ -31,6 +31,7 @@ missing real scams, (2) a live licence demo that locks/unlocks the server withou
 | `docs/07-frontend.md` | any app screen |
 | `docs/08-implementation-plan.md` | older step plan, kept for detail only. **The current plan and order are in PROGRESS.md** |
 | `docs/09-demo-script.md` | rehearsing / preparing judging day |
+| `docs/11-stitch-prompts.md` | designing or building any frontend page: palette, style, page list, Stitch prompts |
 | `docs/10-working-agreement.md` | **every session**: how to report to the user after each feature or bug fix |
 | `server/app/data/*.json` | areas (25 pincodes + lat/lng), verified identifiers, scam types, channels |
 | `PROGRESS.md` | **the plan (phases P0–P9, step-by-step checklists, score map), status board, judging-day runbook, decisions, and done log**: check it first to pick the next phase |
