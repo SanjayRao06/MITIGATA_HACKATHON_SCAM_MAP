@@ -137,6 +137,7 @@ async function watchLicence() {
   try {
     const res = await fetch("/license", { cache: "no-store" });
     const lic = res.ok ? await res.json() : null;
+    showLicence(lic);
     if (lic && !lic.valid) { showExpired(); return; }        // expired: lock now (recovery is in showExpired)
     if (lic && lic.seconds_left != null) {
       // Timer for the exact end (+1 s so the server agrees it has passed).
@@ -147,12 +148,39 @@ async function watchLicence() {
   watchLicence._next = setTimeout(watchLicence, wait);
 }
 
+/**
+ * Licence status line in the footer, on every page: "Licensed to Demo Bank · valid until 31 Oct 2027".
+ * In: the GET /license reply (or null when it couldn't be read). Out: nothing (draws the line).
+ * Why: the PRD's licence demo starts with "show who it is licensed to and when it expires"; before
+ * this the page only said anything once the licence had already ended.
+ * With under an hour left (the 5-minute demo licence) it becomes a live countdown, "ends in 4:32".
+ */
+function showLicence(lic) {
+  if (lic !== undefined) S.licence = lic?.valid ? { name: lic.licensee, expires: lic.expires_at,
+    endsAt: Date.now() + (lic.seconds_left ?? 0) * 1000 } : null;
+  const box = $("#licStatus"), L = S.licence;
+  clearTimeout(showLicence._tick);
+  box.hidden = !L;
+  if (!L) return;
+  const left = Math.max(0, Math.round((L.endsAt - Date.now()) / 1000));
+  let text;
+  if (left < 3600) {
+    text = t("lic_soon", { name: L.name, left: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` });
+    if (left > 0) showLicence._tick = setTimeout(() => showLicence(), 1000);   // tick the countdown
+  } else {
+    text = t("lic_ok", { name: L.name, date: new Date(L.expires).toLocaleDateString(S.lang === "hi" ? "hi-IN" : "en-IN",
+      { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }) });
+  }
+  $("#licText").textContent = text;     // textContent: the licensee name never becomes markup
+}
+
 /* ================================================================ static text + icons */
 function applyStatic() {
   document.documentElement.lang = S.lang;
   $$("[data-t]").forEach((el) => (el.textContent = t(el.dataset.t)));
   $$("[data-icon]").forEach((el) => { if (!el.dataset.done) { el.innerHTML = icon(el.dataset.icon); el.dataset.done = "1"; } });
   $$(".lang [data-lang]").forEach((el) => el.classList.toggle("on", el.dataset.lang === S.lang));
+  if (S.licence) showLicence();          // redraw the licence line in the new language
 }
 $("#langToggle").addEventListener("click", () => {
   S.lang = S.lang === "en" ? "hi" : "en";
@@ -494,7 +522,7 @@ function whyPanel(r) {
  * The WhatsApp warning text for a lookup result ("Share on WhatsApp"), in the current language.
  * Privacy (docs/04): it shares only what's already on screen. A number with fewer than 3
  * independent reporters stays masked (98XXXXX210) and the link then opens the plain Check page,
- * so the full number never travels in the message. Careful wording: "reported", never "scammer".
+ * so the full number never travels in the message. Careful wording (docs/04): it only ever says "reported".
  * In: the /lookup reply, the identifier type, the card's sub-line (business name for verified).
  */
 function shareMessage(r, idType, sub) {
@@ -598,6 +626,19 @@ const CHANNEL_KEY = { "Phone call": "call", "SMS or WhatsApp": "sms", "QR code":
 /* Pictures for the "when" chips, so they can be told apart without reading. */
 const WHEN_ICONS = { now: "zap", today: "sun", yesterday: "moon", pick: "calendar" };
 const EVIDENCE_KINDS = [["screenshot", "camera"], ["screen_rec", "smartphone"], ["call_rec", "headset"]];
+/**
+ * The brief's 12 scam types, grouped into 4 so the report form starts with 4 big choices instead of 12.
+ * Display only: the report still sends the exact scam_type (e.g. "digital-arrest"), because the API
+ * contract, the judges' test tool and the "new scam type" alerts all use the 12 types.
+ * Each row: [group key (text is t("sg_" + key)), icon, the scam types in it]. Every type is in exactly
+ * one group (tests/test_web.py checks this against scam_types.json).
+ */
+const SCAM_GROUPS = [
+  ["officials", "alert", ["digital-arrest", "courier-customs", "electricity-disconnection"]],
+  ["bank", "rupee", ["fake-kyc-link", "otp-call", "upi-refund-qr", "fake-customer-care"]],
+  ["money", "trending", ["investment-group", "job-offer", "lottery-prize"]],
+  ["threats", "alertCircle", ["sextortion", "loan-app-harassment"]],
+];
 
 async function pageReport(params) {
   const meta = await safeMeta();
@@ -655,8 +696,12 @@ async function pageReport(params) {
         <details class="more"><summary>${icon("sliders")}<div><b>${t("details_title")}</b><br><span class="muted small">${t("details_sub")}</span></div>${icon("chevronDown")}</summary>
           <div class="more-body">
             <label class="lbl">${t("q_type")}</label>
-            <div class="tiles small" id="rscam">${Object.keys(SCAM_TYPE_ICONS).map((k) => `
-              <button type="button" class="tile" data-v="${k}">${icon(SCAM_TYPE_ICONS[k])}<span>${esc(scamName(k))}</span></button>`).join("")}</div>
+            <div class="tiles small" id="rscamgroup">${SCAM_GROUPS.map(([g, ic]) => `
+              <button type="button" class="tile" data-v="${g}">${icon(ic)}<span>${t("sg_" + g)}</span></button>`).join("")}
+              <button type="button" class="tile" data-v="other">${icon(SCAM_TYPE_ICONS.other)}<span>${esc(scamName("other"))}</span></button></div>
+            <div id="rscamwrap" hidden>
+              <p class="hint" style="margin-top:10px">${t("q_type_pick")}</p>
+              <div class="chips" id="rscam"></div></div>
             <input class="input" id="rscamother" maxlength="60" placeholder="${t("scam_other_ph")}" aria-label="${t("scam_other_ph")}" style="margin-top:8px" hidden>
             <label class="lbl" for="rnote" style="margin-top:16px">${t("q_note")}</label>
             <textarea class="input" id="rnote" maxlength="2000" placeholder="${t("note_placeholder")}"></textarea>
@@ -713,13 +758,26 @@ async function pageReport(params) {
     $("#rwhenerr").innerHTML = "";
   });
 
-  // ---- optional: scam type (tap again to unselect); "Something else" opens a box.
+  // ---- optional: scam type in two taps. 1) one of 4 groups (tap again to unselect) -> 2) that group's
+  // 2-4 types as chips. "Something else" is a type of its own and opens a short "what kind?" box.
+  // Only a picked TYPE is sent; a group on its own sends nothing (the server then stores "other").
+  let scamGroup = null;
+  $("#rscamgroup").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-v]"); if (!b) return;
+    scamGroup = scamGroup === b.dataset.v ? null : b.dataset.v;
+    $$("#rscamgroup .tile").forEach((x) => x.classList.toggle("on", x.dataset.v === scamGroup));
+    const types = SCAM_GROUPS.find(([g]) => g === scamGroup)?.[2] || [];
+    form.scamType = scamGroup === "other" ? "other" : (types.includes(form.scamType) ? form.scamType : null);
+    $("#rscam").innerHTML = types.map((k) => `
+      <button type="button" class="chip${k === form.scamType ? " on" : ""}" data-v="${k}" aria-pressed="${k === form.scamType}">${icon(SCAM_TYPE_ICONS[k])} ${esc(scamName(k))}</button>`).join("");
+    $("#rscamwrap").hidden = !types.length;
+    $("#rscamother").hidden = form.scamType !== "other";
+    if (form.scamType === "other") $("#rscamother").focus();
+  });
   $("#rscam").addEventListener("click", (e) => {
     const b = e.target.closest("[data-v]"); if (!b) return;
     form.scamType = form.scamType === b.dataset.v ? null : b.dataset.v;
-    $$("#rscam .tile").forEach((x) => x.classList.toggle("on", x.dataset.v === form.scamType));
-    $("#rscamother").hidden = form.scamType !== "other";
-    if (form.scamType === "other") $("#rscamother").focus();
+    $$("#rscam .chip").forEach((x) => { x.classList.toggle("on", x.dataset.v === form.scamType); x.setAttribute("aria-pressed", x.dataset.v === form.scamType); });
   });
   // ---- optional: which proof they have (several allowed). Files are NOT uploaded (privacy).
   $("#revid").addEventListener("click", (e) => {

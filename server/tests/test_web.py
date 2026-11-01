@@ -72,6 +72,26 @@ def test_every_english_key_has_hindi():
     assert keys(en) - keys(hi) == set()
 
 
+def test_report_form_groups_cover_every_scam_type_once():
+    # The report form shows the 12 scam types as 4 groups (SCAM_GROUPS in app.js). Each type from
+    # scam_types.json must be in exactly one group, or people couldn't pick it.
+    from app import reference
+    js = (WEB / "app.js").read_text(encoding="utf-8")
+    block = js[js.index("const SCAM_GROUPS = ["):]
+    block = block[:block.index("];")]
+    group_head = r'\["\w+", "\w+", \['
+    assert len(re.findall(group_head, block)) == 4                  # 4 groups
+    grouped = re.findall(r'"([a-z-]+)"', re.sub(group_head, "", block))
+    assert sorted(grouped) == sorted(reference.SCAM_TYPES), grouped
+
+
+def test_footer_has_licence_status_slot():
+    # The footer shows "Licensed to ... · valid until ..." from GET /license (showLicence in app.js).
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    assert 'id="licStatus"' in html and 'id="licText"' in html
+    assert "showLicence(lic)" in (WEB / "app.js").read_text(encoding="utf-8")
+
+
 # ---------------------------------------------------------------- /meta and /stats
 def test_meta_lists_areas_types_channels():
     m = client.get("/meta").json()

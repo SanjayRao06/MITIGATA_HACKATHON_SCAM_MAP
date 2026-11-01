@@ -343,6 +343,25 @@ what stops editing the licence date · what if the clock is set back · how is l
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
 
+### P6 round 3 — Licence status line + scam types in 4 groups — 2026-11-01
+**What was built (simple terms):**
+- The footer on every page now shows the licence: "Licensed to Demo Bank · valid until 31 Oct 2027"
+  (`showLicence()` in `server/web/app.js`, fed by the `/license` check `watchLicence()` already makes).
+  With under an hour left it turns into a live countdown ("ends in 4:32"), for the 5-minute licence demo.
+- Report form: the 12 scam types are now 4 groups (fake police or officials, bank & payment tricks,
+  easy-money offers, blackmail & threats) + "Something else". Tapping a group shows only its 2–4 types.
+  Display only: the report still sends the exact `scam_type`, so the API, alerts and judges' tool are unchanged.
+- Fixed a comment from the share feature that used a banned word (the privacy tests were failing).
+
+**Files touched:** `server/web/index.html`, `server/web/app.js`, `server/web/i18n.js`, `server/tests/test_web.py`, `PROGRESS.md`
+
+**How to test it:** open the site → footer shows the licence line (switch to हिंदी: it changes language).
+Upload the 5-minute licence (P2 commands below) → the line counts down, then the expired screen appears.
+Report page → "Add details" → pick a group → pick a type → send → Check that number: it shows that exact type.
+`cd server; .venv\Scripts\python -m pytest -q` → 250 passed.
+
+**Known gaps / next:** the Map, Dashboard and Safety guide still list the 12 types individually.
+
 ### P2 — Licence finished on live — 2026-11-01
 **What was built (simple terms):**
 - The expired screen no longer shows a "Call 1930" button (1930 is for scam victims, not licence errors).
