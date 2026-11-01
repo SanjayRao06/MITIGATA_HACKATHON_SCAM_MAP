@@ -423,7 +423,7 @@ def render_cheatsheet(sections: list[dict], now: datetime) -> str:
     out = [
         "SCAM MAP - DEMO CHEAT SHEET (10 examples, mostly fake reports)",
         "=" * 70,
-        f"Made {now.strftime('%Y-%m-%d %H:%M')} IST. Re-make right before the demo:  & $P tools\make_demo_examples.py",
+        f"Made {now.strftime('%Y-%m-%d %H:%M')} IST. Re-make right before the demo:  & $P tools\\make_demo_examples.py",
         f"WEBSITE  {LIVE}   (phone, or F12 -> phone view)",
         f"/docs    {LIVE}/docs   POST /reports -> Try it out -> paste ONE line -> Execute",
         "/docs lets us act as MANY people: each body has its own reporter_id (person) and ip_prefix",
