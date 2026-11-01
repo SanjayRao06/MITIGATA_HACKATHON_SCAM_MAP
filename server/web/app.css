@@ -190,6 +190,9 @@ details.more.why { margin-top: 14px; }
 .why-list { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 8px; line-height: 1.45; }
 .why-list li::marker { color: var(--sage); font-weight: 600; }
 .why-list li.why-rule::marker { color: var(--gold, #C9A227); }
+/* "Read aloud" button on the Check result */
+.speak-btn { width: 100%; margin-bottom: 12px; gap: 8px; }
+.speak-btn.on { background: var(--sage); color: #fff; }
 .toggle { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); cursor: pointer; }
 .toggle input { width: 22px; height: 22px; accent-color: var(--sage); }
 .combo { position: relative; }

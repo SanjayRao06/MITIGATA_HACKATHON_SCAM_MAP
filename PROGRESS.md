@@ -238,6 +238,7 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 ### P9 — Extras (only after P1–P8 are done)
 - [ ] 9.1 Hindi **voice** reporting via Sarvam (phone side only; optional; never inside trust rules; nothing logged)
 - [x] 9.2 Explain panel in the UI ("Why this result?" on every Check result, EN + HI; `why` field in `/lookup`, counts only; `tests/test_why.py`)
+- [x] 9.2b "Read aloud" on every Check result (browser text-to-speech, Indian EN / HI voices, never reads the number; hidden where the browser cannot speak)
 - [ ] 9.3 Lookalike-domain detection (e.g. `sbi-kyc.in` vs `sbi.co.in`)
 - [ ] 9.4 QR scan for UPI IDs · share-target from SMS app
 - [ ] 9.5 Organiser logs replay at the venue (if they give us logs): parse → replay → check verdicts look sane

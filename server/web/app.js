@@ -180,10 +180,65 @@ function router() {
   const navName = ROUTES[name] ? (name || "home") : "home";
   $$("[data-nav]").forEach((a) => a.classList.toggle("on", a.dataset.nav === navName));
   if (S.mapInstance && name !== "map") { S.mapInstance.remove(); S.mapInstance = null; }
+  stopSpeaking();   // never keep reading a result after leaving it
   window.scrollTo(0, 0);
   page(params);
 }
 window.addEventListener("hashchange", router);
+
+/* ================================================================ read aloud */
+/*
+  "Read aloud" on a Check result, for people who find reading hard (and for Hindi speakers).
+  Uses the browser's own text-to-speech (speechSynthesis): free, no key, nothing sent to OUR server.
+  Hidden where the browser can't speak. It reads only what's already on screen (verdict, advice),
+  never the number itself, so no personal data is spoken.
+*/
+const CAN_SPEAK = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+
+/** Best voice for the current language: an Indian voice first (hi-IN / en-IN), then any of that language. */
+function pickVoice(lang) {
+  const voices = CAN_SPEAK ? speechSynthesis.getVoices() : [];
+  const norm = (v) => v.lang.replace("_", "-").toLowerCase();
+  const want = lang === "hi" ? "hi-in" : "en-in";
+  return voices.find((v) => norm(v) === want) || voices.find((v) => norm(v).startsWith(lang)) || null;
+}
+
+/** Stop any reading and reset the button. Safe to call any time. */
+function stopSpeaking() {
+  if (!CAN_SPEAK) return;
+  speechSynthesis.cancel();
+  $$("[data-speak]").forEach((b) => { b.classList.remove("on"); b.innerHTML = `${icon("volume")} ${t("speak_btn")}`; });
+}
+
+/**
+ * Read `text` out loud in the current language. Pressing the button again stops it.
+ * The text is split into sentences: Chrome on Android cuts off one long utterance after ~15 s.
+ */
+function speak(text, btn) {
+  if (!CAN_SPEAK || !text) return;
+  if (btn.classList.contains("on")) { stopSpeaking(); return; }
+  stopSpeaking();
+  const voice = pickVoice(S.lang);
+  if (!voice && S.lang === "hi") toast(t("speak_no_voice"));
+  const parts = text.match(/[^.!?।]+[.!?।]?/g).map((s) => s.trim()).filter(Boolean);
+  parts.forEach((part, i) => {
+    const u = new SpeechSynthesisUtterance(part);
+    u.lang = S.lang === "hi" ? "hi-IN" : "en-IN";
+    if (voice) u.voice = voice;
+    u.rate = 0.95;   // a little slower than default: easier to follow
+    if (i === parts.length - 1) { u.onend = stopSpeaking; u.onerror = stopSpeaking; }
+    speechSynthesis.speak(u);
+  });
+  btn.classList.add("on");
+  btn.innerHTML = `${icon("stop")} ${t("speak_stop")}`;
+}
+
+// One listener for every "Read aloud" button; the text to read sits on the button (data-speak).
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-speak]");
+  if (btn) speak(btn.dataset.speak, btn);
+});
+if (CAN_SPEAK) speechSynthesis.getVoices();   // some browsers load the voice list lazily
 
 /* ================================================================ shared pieces */
 function alertText(a) {
@@ -449,12 +504,23 @@ function resultCard(r, typed, idType) {
       <p class="note">${icon("eyeOff")}<span>${t("recent_note")}</span></p>
     </div>` : "";
 
+  // What "Read aloud" says: the verdict, the headline, the sub-line, dispute status and the safety
+  // advice. Never the number itself (it may be masked, and digits read aloud help nobody).
+  const spoken = [t("verdict_" + r.verdict), title, sub,
+    r.challenged ? t("v_challenged") : "",
+    r.verdict === "VERIFIED_BUSINESS" ? "" : t("advice_title"),
+    r.verdict === "VERIFIED_BUSINESS" ? "" : scamAdvice(r.scam_type || "otp-call")]
+    .map((s) => String(s || "").trim()).filter((s, i, all) => s && all.indexOf(s) === i)   // no blanks, no repeats
+    .map((s) => s.replace(/[.!?।]?$/, (m) => m || (S.lang === "hi" ? "।" : "."))).join(" ");
+  const speakBtn = CAN_SPEAK ? `
+        <button type="button" class="btn btn-quiet btn-sm speak-btn" data-speak="${esc(spoken)}">${icon("volume")} ${t("speak_btn")}</button>` : "";
+
   return `
     <div class="result ${cls}">
       <div class="result-head"><span class="badge-ico">${icon(headIcon)}</span>
         <div><span class="verdict-label">${t("verdict_" + r.verdict)}</span>
           <h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ""}</div></div>
-      <div class="result-body">
+      <div class="result-body">${speakBtn}
         ${r.challenged ? `<div class="underreview">${icon("scale")} ${t("v_challenged")}</div>` : ""}
         <div class="value-box"><small>${t("r_value_" + idType)}</small><b>${esc(r.display_value)}</b>
           ${r.masked ? `<span class="small muted">${t(r.challenged ? "r_hidden_review" : "r_hidden")}</span>` : ""}</div>

@@ -167,6 +167,10 @@ const STRINGS = {
     why_bar_not_met: "A known scam needs at least {need_people} independent people on {need_networks} different networks. Until then it stays \"reported, not confirmed\".",
     why_challenged: "A business has disputed these reports, so it stays under review and is never shown as a known scam.",
     why_privacy: "Only counts are shown. Nobody who reported can be identified.",
+    // "Read aloud" button on the Check result
+    speak_btn: "Read aloud",
+    speak_stop: "Stop reading",
+    speak_no_voice: "No Hindi voice on this device, so the default voice is used.",
     // expired
     expired_checking: "Checking again…",
     // misc
@@ -317,6 +321,9 @@ const STRINGS = {
     why_bar_not_met: "जाना-माना स्कैम दिखाने के लिए कम से कम {need_networks} अलग नेटवर्क पर {need_people} स्वतंत्र लोग चाहिए। तब तक यह \"रिपोर्ट हुआ, पुष्टि नहीं\" रहेगा।",
     why_challenged: "एक व्यवसाय ने इन रिपोर्ट पर आपत्ति की है, इसलिए यह समीक्षा में है और कभी जाना-माना स्कैम नहीं दिखेगा।",
     why_privacy: "सिर्फ़ गिनती दिखाई जाती है। रिपोर्ट करने वाले की पहचान नहीं हो सकती।",
+    speak_btn: "सुनें",
+    speak_stop: "सुनना बंद करें",
+    speak_no_voice: "इस डिवाइस पर हिंदी आवाज़ नहीं है, इसलिए सामान्य आवाज़ इस्तेमाल हो रही है।",
     expired_checking: "फिर से जांच रहे हैं…",
     loading: "लोड हो रहा है…", back: "वापस", retry: "फिर कोशिश करें", people: "लोग",
     toast_copied: "कॉपी हो गया",
