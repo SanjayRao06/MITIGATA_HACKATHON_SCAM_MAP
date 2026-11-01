@@ -207,7 +207,7 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 - [x] 6.10 **Licence expired** full screen (EN + HI) on any 403 `LICENSE_EXPIRED`; polls `/license` every 20 s and recovers
 - [ ] 6.11 UI groups the 12 scam types visually (e.g. Calls / Bank & KYC / Money & UPI / Jobs & offers) but sends the exact PRD values
 - [x] 6.12 Hidden stopwatch (form open → submit) logged to console for rehearsal
-- [ ] 6.13 Serve the built site from our server (or Vercel/Netlify) and test on a real phone on mobile data
+- [x] 6.13 Serve the built site from our server (or Vercel/Netlify) and test on a real phone on mobile data (2026-11-01: tested by Avi on a phone on the live site, Hindi + icons-only both work)
 - [x] 6.14 If the site is hosted separately from the API: enable CORS on the server for that site's address only
 - [x] 6.15 `ip_prefix` for real app users: the browser can't know it, so send `"web"` and let the server derive the first 3 parts of the caller's IP **and hash it immediately** (test tool keeps sending its own)
 - [x] 6.17 Dashboard page + small stats endpoint (`GET /stats`: 7-day totals, per-day counts, top types, top areas)
@@ -219,7 +219,7 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 ### P7 — Ops: keep it alive and proven (protects every live check)
 - [x] 7.1 **UptimeRobot** monitor → `/health` every 5 min (Render free plan sleeps after ~15 min)
 - [x] 7.2 Confirm auto-deploy on push is on (Render → Settings) (confirmed 2026-11-01: every push went live in ~1-2 min)
-- [ ] 7.3 Deploy the frontend; check it works on the live https URL from a phone
+- [x] 7.3 Deploy the frontend; check it works on the live https URL from a phone (live site checked on a phone, 2026-11-01)
 - [x] 7.4 Run `scenarios.py` against the live server once (`--allow-remote-reset`), then reset (2026-11-01: 46/47 on live, only the 20-call laptop latency row; demo data kept for judging)
 - [x] 7.5 Long licence uploaded on live; `GET /license` valid through judging day
 - [x] 7.6 Check Neon free compute hours. Keep-alive is off unless `KEEP_DB_AWAKE=1`: set it on Render the day before judging (2026-11-01: `KEEP_DB_AWAKE=1` set on Render for judging day)
