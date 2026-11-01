@@ -6,6 +6,7 @@
 |---|---|
 | 🌐 **Website** | https://mitigata-hackathon-scam-map.onrender.com |
 | 🧪 **API playground (/docs)** | https://mitigata-hackathon-scam-map.onrender.com/docs |
+| 📱 **Works on** | Phones and desktops: any modern browser, no app to install (mobile-first, with a wider layout on laptops) |
 | 🗂️ **Demo walkthrough** | [`tools/samples/demo_examples.txt`](tools/samples/demo_examples.txt) |
 
 ---
