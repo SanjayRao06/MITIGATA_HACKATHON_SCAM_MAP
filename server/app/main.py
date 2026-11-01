@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from sqlalchemy import delete
 
-from app import db, reference
+from app import db, reference, speech
 from app import license as licence  # P2 licence: middleware + GET/POST /license
 from app.alerts import build_alerts
 from app.assessment import refresh_all_trusted_flags
@@ -96,6 +96,7 @@ async def website_always_fresh(request, call_next):
 
 
 app.middleware("http")(website_always_fresh)
+app.include_router(speech.router)   # GET /speak: Hindi/English audio for "Read aloud" (website only)
 
 
 @app.exception_handler(RequestValidationError)

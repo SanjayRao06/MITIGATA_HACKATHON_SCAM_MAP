@@ -189,48 +189,79 @@ window.addEventListener("hashchange", router);
 /* ================================================================ read aloud */
 /*
   "Read aloud" on a Check result, for people who find reading hard (and for Hindi speakers).
-  Uses the browser's own text-to-speech (speechSynthesis): free, no key, nothing sent to OUR server.
-  Hidden where the browser can't speak. It reads only what's already on screen (verdict, advice),
-  never the number itself, so no personal data is spoken.
+  1) The device's own voice (speechSynthesis) when it has one for the language: instant, offline.
+  2) Otherwise (many phones/laptops have no Hindi voice) our server's GET /speak, which returns an
+     MP3 in a natural Indian voice (app/speech.py). Same words, same button.
+  It reads only what's already on screen (verdict, advice), never the number itself, so no
+  personal data is spoken or sent.
 */
-const CAN_SPEAK = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+const LOCAL_TTS = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+const CAN_SPEAK = LOCAL_TTS || "Audio" in window;
 
-/** Best voice for the current language: an Indian voice first (hi-IN / en-IN), then any of that language. */
-function pickVoice(lang) {
-  const voices = CAN_SPEAK ? speechSynthesis.getVoices() : [];
-  const norm = (v) => v.lang.replace("_", "-").toLowerCase();
-  const want = lang === "hi" ? "hi-in" : "en-in";
-  return voices.find((v) => norm(v) === want) || voices.find((v) => norm(v).startsWith(lang)) || null;
+/** The device's voices. Some browsers fill the list a moment after the page loads, so wait up to 1.5 s. */
+function deviceVoices() {
+  if (!LOCAL_TTS) return Promise.resolve([]);
+  const now = speechSynthesis.getVoices();
+  if (now.length) return Promise.resolve(now);
+  return new Promise((done) => {
+    const finish = () => done(speechSynthesis.getVoices());
+    speechSynthesis.addEventListener("voiceschanged", finish, { once: true });
+    setTimeout(finish, 1500);
+  });
 }
 
-/** Stop any reading and reset the button. Safe to call any time. */
+/** Best device voice for the language: an Indian one first (hi-IN / en-IN), then any of that language. */
+async function pickVoice(lang) {
+  const voices = await deviceVoices();
+  const norm = (v) => (v.lang || "").replace("_", "-").toLowerCase();
+  if (lang === "hi") {
+    return voices.find((v) => norm(v) === "hi-in") || voices.find((v) => norm(v).startsWith("hi"))
+      || voices.find((v) => /hindi|हिन्दी|हिंदी/i.test(v.name)) || null;
+  }
+  return voices.find((v) => norm(v) === "en-in") || voices.find((v) => norm(v).startsWith("en")) || null;
+}
+
+/** Stop any reading (device voice or server audio) and reset the button. Safe to call any time. */
 function stopSpeaking() {
-  if (!CAN_SPEAK) return;
-  speechSynthesis.cancel();
+  if (LOCAL_TTS) speechSynthesis.cancel();
+  if (S.audio) { S.audio.onended = S.audio.onerror = null; S.audio.pause(); S.audio = null; }
   $$("[data-speak]").forEach((b) => { b.classList.remove("on"); b.innerHTML = `${icon("volume")} ${t("speak_btn")}`; });
 }
 
-/**
- * Read `text` out loud in the current language. Pressing the button again stops it.
- * The text is split into sentences: Chrome on Android cuts off one long utterance after ~15 s.
- */
-function speak(text, btn) {
-  if (!CAN_SPEAK || !text) return;
-  if (btn.classList.contains("on")) { stopSpeaking(); return; }
-  stopSpeaking();
-  const voice = pickVoice(S.lang);
-  if (!voice && S.lang === "hi") toast(t("speak_no_voice"));
+/** Read with the device's own voice, sentence by sentence (Chrome on Android cuts one long utterance after ~15 s). */
+function speakOnDevice(text, voice) {
   const parts = text.match(/[^.!?।]+[.!?।]?/g).map((s) => s.trim()).filter(Boolean);
   parts.forEach((part, i) => {
     const u = new SpeechSynthesisUtterance(part);
-    u.lang = S.lang === "hi" ? "hi-IN" : "en-IN";
-    if (voice) u.voice = voice;
+    u.lang = voice.lang;
+    u.voice = voice;
     u.rate = 0.95;   // a little slower than default: easier to follow
     if (i === parts.length - 1) { u.onend = stopSpeaking; u.onerror = stopSpeaking; }
     speechSynthesis.speak(u);
   });
+}
+
+/** Read with our server's voice (no device voice for this language). */
+function speakFromServer(text) {
+  const audio = new Audio(`/speak?lang=${S.lang}&text=${encodeURIComponent(text)}`);
+  const fail = () => { stopSpeaking(); toast(t("speak_failed")); };
+  audio.onended = stopSpeaking;
+  audio.onerror = fail;
+  S.audio = audio;
+  audio.play().catch(fail);
+}
+
+/** "Read aloud" pressed: read `text` in the current language. Pressing it again stops. */
+async function speak(text, btn) {
+  if (!CAN_SPEAK || !text) return;
+  if (btn.classList.contains("on")) { stopSpeaking(); return; }
+  stopSpeaking();
   btn.classList.add("on");
   btn.innerHTML = `${icon("stop")} ${t("speak_stop")}`;
+  const voice = await pickVoice(S.lang);
+  if (!btn.classList.contains("on")) return;   // stopped (or page changed) while we were looking
+  if (voice) speakOnDevice(text, voice);
+  else speakFromServer(text);
 }
 
 // One listener for every "Read aloud" button; the text to read sits on the button (data-speak).
@@ -238,7 +269,7 @@ document.addEventListener("click", (e) => {
   const btn = e.target.closest("[data-speak]");
   if (btn) speak(btn.dataset.speak, btn);
 });
-if (CAN_SPEAK) speechSynthesis.getVoices();   // some browsers load the voice list lazily
+deviceVoices();   // start loading the voice list early
 
 /* ================================================================ shared pieces */
 function alertText(a) {

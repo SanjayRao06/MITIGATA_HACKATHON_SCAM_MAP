@@ -170,7 +170,7 @@ const STRINGS = {
     // "Read aloud" button on the Check result
     speak_btn: "Read aloud",
     speak_stop: "Stop reading",
-    speak_no_voice: "No Hindi voice on this device, so the default voice is used.",
+    speak_failed: "Couldn't play the audio right now. Please try again.",
     // expired
     expired_checking: "Checking again…",
     // misc
@@ -323,7 +323,7 @@ const STRINGS = {
     why_privacy: "सिर्फ़ गिनती दिखाई जाती है। रिपोर्ट करने वाले की पहचान नहीं हो सकती।",
     speak_btn: "सुनें",
     speak_stop: "सुनना बंद करें",
-    speak_no_voice: "इस डिवाइस पर हिंदी आवाज़ नहीं है, इसलिए सामान्य आवाज़ इस्तेमाल हो रही है।",
+    speak_failed: "अभी आवाज़ नहीं चल पाई। कृपया फिर कोशिश करें।",
     expired_checking: "फिर से जांच रहे हैं…",
     loading: "लोड हो रहा है…", back: "वापस", retry: "फिर कोशिश करें", people: "लोग",
     toast_copied: "कॉपी हो गया",

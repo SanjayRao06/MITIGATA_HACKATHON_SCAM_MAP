@@ -78,7 +78,9 @@ Use the website's **Check** page, or `GET /lookup` in `/docs`.
 | `9123498765` | Phone | No reports | Never reported |
 
 On any result, open **"Why this result?"** to see which trust rules applied (counts only, never who reported),
-or tap **🔊 Read aloud** to hear the result in English or Hindi (the phone's own voice; nothing is sent to us).
+or tap **🔊 Read aloud** to hear the result in English or Hindi. It uses the phone's own voice; if the phone has
+no Hindi voice, our server makes the audio (`GET /speak`, a Microsoft neural voice). Only the on-screen verdict
+and safety advice are spoken, never the number (long numbers are refused), and the text is never logged.
 
 **Number formats:** `+91 98765 43210`, `09876543210`, `98765-43210` and `919876543210` are the same number.
 UPI IDs ignore capitals. Links ignore `http`, `www.` and `?tracking`. `VM-HDFCBK` is the same sender as `HDFCBK`.
