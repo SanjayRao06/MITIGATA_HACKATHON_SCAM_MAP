@@ -1,32 +1,38 @@
-COMMUNITY SCAM MAP - SAMPLE REQUESTS FOR /docs
-================================================
-Where:  http://localhost:8000/docs   (or https://mitigata-hackathon-scam-map.onrender.com/docs)
-How:    POST /reports -> Try it out -> paste ONE body below -> Execute -> read "Server response"
-        GET /lookup   -> Try it out -> fill "type" and "value" -> Execute
+COMMUNITY SCAM MAP - DEMO WALKTHROUGH (copy-paste into /docs)
+================================================================
+Generated 2026-11-01 07:17 IST. Times are relative to then: alerts only look at the
+last 24 hours, so run  python tools/make_demo_examples.py  again right before you use it.
 
-RULES
-- Send each report ONCE (each has its own report_id; the same report_id twice counts once).
-- Times must be in the PAST (future -> 400). If you use this on another day, change the
-  date in "occurred_at" / "reported_at" to that day (keep the time earlier than now).
-- Start with:  POST /admin/reset  -> Execute
-- On the LIVE server, finish with POST /admin/reset again.
+Where:  https://mitigata-hackathon-scam-map.onrender.com/docs   (or http://localhost:8000/docs)
+How:    POST /reports  -> Try it out -> paste ONE body -> Execute -> look at "Server response"
+        GET /lookup    -> Try it out -> fill "type" and "value" -> Execute
+        GET /map, GET /alerts, POST /challenges the same way
+Order:  do the sections in order, each body ONCE (resending the same report_id counts once).
+Server: the numbers are fresh every time, so you do NOT need to reset. On the live server the
+        demo data stays (that's what makes the SPIKE in section 9 work). Never reset live
+        right before judging unless you reload the demo data:
+        python tools/scenarios.py --base <url> --seed 7 --allow-remote-reset
+Words:  verdicts are KNOWN_SCAM / SUSPICIOUS / NO_REPORTS / VERIFIED_BUSINESS; "hidden" means
+        display_value is masked like 98XXXXX210 (fewer than 3 trusted people).
 
 
-------------------------------------------------
-EXAMPLE 1 - Real scam reported by 3 different people (3 number formats, same case)
-------------------------------------------------
+----------------------------------------------------------------
+1. A REAL SCAM: 3 different people, 3 ways of typing the number
+----------------------------------------------------------------
+Different people, different networks and areas, each in their own words: this is what a real
+scam looks like, so it must become KNOWN_SCAM. One person alone must stay hidden ([PRD §5]).
 
-Report A (Ravi, HSR Layout)  -> expect 201, merged: false, note the case_id
+POST /reports   Report A (Ravi, HSR Layout)  -> 201, merged: false
 {
-  "report_id": "rep_001",
-  "occurred_at": "2026-10-31T10:00:00+05:30",
-  "reported_at": "2026-10-31T10:20:00+05:30",
-  "reporter_id": "r_ravi01",
+  "report_id": "demo_010717_001",
+  "occurred_at": "2026-10-31T22:17:13+05:30",
+  "reported_at": "2026-10-31T22:29:13+05:30",
+  "reporter_id": "r_ravi_010717",
   "ip_prefix": "103.21.58",
   "channel": "Phone call",
   "scam_type": "digital-arrest",
   "identifier_type": "phone",
-  "identifier_value": "+91 98765 43210",
+  "identifier_value": "+91 95844 51121",
   "pincode": "560102",
   "locality": "HSR Layout",
   "city": "Bengaluru",
@@ -35,91 +41,285 @@ Report A (Ravi, HSR Layout)  -> expect 201, merged: false, note the case_id
   "amount_lost_inr": 0
 }
 
-Report B (Priya, Koramangala, different format)  -> expect 201, merged: true, SAME case_id
+GET /lookup   type = phone   value = 9584451121
+   -> SUSPICIOUS, distinct_reporters 1, hidden   (after A)
+
+POST /reports   Report B (Priya, Koramangala, number typed with a 0)  -> 201, merged: true
 {
-  "report_id": "rep_002",
-  "occurred_at": "2026-10-31T11:15:00+05:30",
-  "reported_at": "2026-10-31T11:30:00+05:30",
-  "reporter_id": "r_priya02",
+  "report_id": "demo_010717_002",
+  "occurred_at": "2026-11-01T01:17:13+05:30",
+  "reported_at": "2026-11-01T01:29:13+05:30",
+  "reporter_id": "r_priya_010717",
   "ip_prefix": "49.36.12",
   "channel": "Phone call",
   "scam_type": "digital-arrest",
   "identifier_type": "phone",
-  "identifier_value": "09876543210",
+  "identifier_value": "09584451121",
   "pincode": "560034",
   "locality": "Koramangala",
   "city": "Bengaluru",
-  "note": "They kept me on video for 2 hours and asked for money to close the case",
+  "note": "They kept my father on a video call for 3 hours and asked him to transfer money",
   "has_screenshot": false,
-  "amount_lost_inr": 50000
+  "amount_lost_inr": 15000
 }
 
-Report C (Amit, Indiranagar, another format)  -> expect 201, merged: true, SAME case_id
+GET /lookup   type = phone   value = 9584451121
+   -> SUSPICIOUS, distinct_reporters 2, hidden   (after A+B)
+
+POST /reports   Report C (Amit, Indiranagar, number typed with a dash)  -> 201, merged: true
 {
-  "report_id": "rep_003",
-  "occurred_at": "2026-10-31T12:40:00+05:30",
-  "reported_at": "2026-10-31T13:00:00+05:30",
-  "reporter_id": "r_amit03",
+  "report_id": "demo_010717_003",
+  "occurred_at": "2026-11-01T04:17:13+05:30",
+  "reported_at": "2026-11-01T04:29:13+05:30",
+  "reporter_id": "r_amit_010717",
   "ip_prefix": "117.99.4",
   "channel": "Phone call",
   "scam_type": "digital-arrest",
   "identifier_type": "phone",
-  "identifier_value": "98765-43210",
+  "identifier_value": "95844-51121",
   "pincode": "560038",
   "locality": "Indiranagar",
   "city": "Bengaluru",
-  "note": "Mujhe bola arrest warrant hai, Skype pe aao",
+  "note": "Mujhe bola arrest warrant hai, Skype pe aao abhi",
   "has_screenshot": false,
   "amount_lost_inr": 0
 }
 
-LOOKUP   type = phone   value = 9876543210
-  after A        -> SUSPICIOUS, distinct_reporters 1, display_value 98XXXXX210 (hidden)
-  after A+B      -> SUSPICIOUS, distinct_reporters 2, still 98XXXXX210
-  after A+B+C    -> KNOWN_SCAM, distinct_reporters 3, display_value +919876543210 (shown)
-  Try other formats too: +91 98765 43210 / 09876543210 / 919876543210 -> same answer
+GET /lookup   type = phone   value = 9584451121
+   -> KNOWN_SCAM, distinct_reporters 3, shown in full   (after A+B+C: 3 people, now shown in full)
+
+GET /lookup   type = phone   value = 919584451121
+   -> KNOWN_SCAM, distinct_reporters 3   (same number typed another way -> same answer)
 
 
-------------------------------------------------
-EXAMPLE 2 - Spammer: ONE person reports the same number many times
-------------------------------------------------
-Send this, then send it again with report_id changed to rep_011, then rep_012.
-(reporter_id stays the same -> same person)  -> each 201, same case_id
+----------------------------------------------------------------
+2. FAKE: SPAMMING - one person reports the same number 6 times in an hour
+----------------------------------------------------------------
+Same reporter_id every time. Rule L1: one person counts once. Rate limit: more than 3 reports
+an hour from one person -> 429 (using each report's own time).
+
+POST /reports   1st  -> 201
 {
-  "report_id": "rep_010",
-  "occurred_at": "2026-10-31T13:00:00+05:30",
-  "reported_at": "2026-10-31T13:05:00+05:30",
-  "reporter_id": "r_angry99",
+  "report_id": "demo_010717_004",
+  "occurred_at": "2026-11-01T06:17:13+05:30",
+  "reported_at": "2026-11-01T06:29:13+05:30",
+  "reporter_id": "r_angry_010717",
   "ip_prefix": "1.2.3",
   "channel": "SMS or WhatsApp",
   "scam_type": "lottery-prize",
   "identifier_type": "phone",
-  "identifier_value": "9123456780",
-  "pincode": "560066",
-  "locality": "Whitefield",
+  "identifier_value": "8654810728",
+  "pincode": "560010",
+  "locality": "Rajajinagar",
   "city": "Bengaluru",
   "note": "scam",
   "has_screenshot": false,
   "amount_lost_inr": 0
 }
 
-LOOKUP   type = phone   value = 9123456780
-  -> report_count 3, distinct_reporters 1, SUSPICIOUS, hidden 91XXXXX780  (one person counts once)
+POST /reports   2nd  -> 201
+{"report_id": "demo_010717_005", "occurred_at": "2026-11-01T06:24:25+05:30", "reported_at": "2026-11-01T06:36:25+05:30", "reporter_id": "r_angry_010717", "ip_prefix": "1.2.3", "channel": "SMS or WhatsApp", "scam_type": "lottery-prize", "identifier_type": "phone", "identifier_value": "8654810728", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "scam", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   3rd  -> 201
+{"report_id": "demo_010717_006", "occurred_at": "2026-11-01T06:31:37+05:30", "reported_at": "2026-11-01T06:43:37+05:30", "reporter_id": "r_angry_010717", "ip_prefix": "1.2.3", "channel": "SMS or WhatsApp", "scam_type": "lottery-prize", "identifier_type": "phone", "identifier_value": "8654810728", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "scam", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   4th  -> 429 RATE_LIMITED
+{"report_id": "demo_010717_007", "occurred_at": "2026-11-01T06:38:49+05:30", "reported_at": "2026-11-01T06:50:49+05:30", "reporter_id": "r_angry_010717", "ip_prefix": "1.2.3", "channel": "SMS or WhatsApp", "scam_type": "lottery-prize", "identifier_type": "phone", "identifier_value": "8654810728", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "scam", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   5th  -> 429 RATE_LIMITED
+{"report_id": "demo_010717_008", "occurred_at": "2026-11-01T06:46:01+05:30", "reported_at": "2026-11-01T06:58:01+05:30", "reporter_id": "r_angry_010717", "ip_prefix": "1.2.3", "channel": "SMS or WhatsApp", "scam_type": "lottery-prize", "identifier_type": "phone", "identifier_value": "8654810728", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "scam", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   6th  -> 429 RATE_LIMITED
+{"report_id": "demo_010717_009", "occurred_at": "2026-11-01T06:53:13+05:30", "reported_at": "2026-11-01T07:05:13+05:30", "reporter_id": "r_angry_010717", "ip_prefix": "1.2.3", "channel": "SMS or WhatsApp", "scam_type": "lottery-prize", "identifier_type": "phone", "identifier_value": "8654810728", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "scam", "has_screenshot": false, "amount_lost_inr": 0}
+
+GET /lookup   type = phone   value = 8654810728
+   -> SUSPICIOUS, distinct_reporters 1, report_count 3, hidden   (only 3 stored, and they are ONE person)
 
 
-------------------------------------------------
-EXAMPLE 3 - UPI ID
-------------------------------------------------
+----------------------------------------------------------------
+3. FAKE: ONE WI-FI, MANY ACCOUNTS - 8 accounts, same ip_prefix, 90 minutes
+----------------------------------------------------------------
+Different reporter_id each time but the SAME ip_prefix (one house / one Wi-Fi). Rule L2: same
+network + same number within 24 h = ONE source. (The judges' version uses 22 accounts; the
+scenario runner tools/scenarios.py sends exactly 22.)
+
+POST /reports   account 1  -> 201
 {
-  "report_id": "rep_020",
-  "occurred_at": "2026-10-31T09:30:00+05:30",
-  "reported_at": "2026-10-31T09:45:00+05:30",
-  "reporter_id": "r_neha20",
+  "report_id": "demo_010717_010",
+  "occurred_at": "2026-11-01T05:47:13+05:30",
+  "reported_at": "2026-11-01T05:59:13+05:30",
+  "reporter_id": "r_farm1_010717",
+  "ip_prefix": "49.200.10",
+  "channel": "Phone call",
+  "scam_type": "otp-call",
+  "identifier_type": "phone",
+  "identifier_value": "9635887548",
+  "pincode": "560066",
+  "locality": "Whitefield",
+  "city": "Bengaluru",
+  "note": "fraud call",
+  "has_screenshot": false,
+  "amount_lost_inr": 0
+}
+
+POST /reports   account 2  -> 201
+{"report_id": "demo_010717_011", "occurred_at": "2026-11-01T05:58:01+05:30", "reported_at": "2026-11-01T06:10:01+05:30", "reporter_id": "r_farm2_010717", "ip_prefix": "49.200.10", "channel": "Phone call", "scam_type": "otp-call", "identifier_type": "phone", "identifier_value": "9635887548", "pincode": "560066", "locality": "Whitefield", "city": "Bengaluru", "note": "this number is fake", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   account 3  -> 201
+{"report_id": "demo_010717_012", "occurred_at": "2026-11-01T06:08:49+05:30", "reported_at": "2026-11-01T06:20:49+05:30", "reporter_id": "r_farm3_010717", "ip_prefix": "49.200.10", "channel": "Phone call", "scam_type": "otp-call", "identifier_type": "phone", "identifier_value": "9635887548", "pincode": "560066", "locality": "Whitefield", "city": "Bengaluru", "note": "cheater", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   account 4  -> 201
+{"report_id": "demo_010717_013", "occurred_at": "2026-11-01T06:19:37+05:30", "reported_at": "2026-11-01T06:31:37+05:30", "reporter_id": "r_farm4_010717", "ip_prefix": "49.200.10", "channel": "Phone call", "scam_type": "otp-call", "identifier_type": "phone", "identifier_value": "9635887548", "pincode": "560066", "locality": "Whitefield", "city": "Bengaluru", "note": "scam call", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   account 5  -> 201
+{"report_id": "demo_010717_014", "occurred_at": "2026-11-01T06:30:25+05:30", "reported_at": "2026-11-01T06:42:25+05:30", "reporter_id": "r_farm5_010717", "ip_prefix": "49.200.10", "channel": "Phone call", "scam_type": "otp-call", "identifier_type": "phone", "identifier_value": "9635887548", "pincode": "560066", "locality": "Whitefield", "city": "Bengaluru", "note": "do not pick up", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   account 6  -> 201
+{"report_id": "demo_010717_015", "occurred_at": "2026-11-01T06:41:13+05:30", "reported_at": "2026-11-01T06:53:13+05:30", "reporter_id": "r_farm6_010717", "ip_prefix": "49.200.10", "channel": "Phone call", "scam_type": "otp-call", "identifier_type": "phone", "identifier_value": "9635887548", "pincode": "560066", "locality": "Whitefield", "city": "Bengaluru", "note": "fake caller", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   account 7  -> 201
+{"report_id": "demo_010717_016", "occurred_at": "2026-11-01T06:52:01+05:30", "reported_at": "2026-11-01T07:04:01+05:30", "reporter_id": "r_farm7_010717", "ip_prefix": "49.200.10", "channel": "Phone call", "scam_type": "otp-call", "identifier_type": "phone", "identifier_value": "9635887548", "pincode": "560066", "locality": "Whitefield", "city": "Bengaluru", "note": "beware", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   account 8  -> 201
+{"report_id": "demo_010717_017", "occurred_at": "2026-11-01T07:02:49+05:30", "reported_at": "2026-11-01T07:14:49+05:30", "reporter_id": "r_farm8_010717", "ip_prefix": "49.200.10", "channel": "Phone call", "scam_type": "otp-call", "identifier_type": "phone", "identifier_value": "9635887548", "pincode": "560066", "locality": "Whitefield", "city": "Bengaluru", "note": "they lie", "has_screenshot": false, "amount_lost_inr": 0}
+
+GET /lookup   type = phone   value = 9635887548
+   -> SUSPICIOUS, distinct_reporters 1, hidden   (8 accounts = 1 source)
+
+GET /alerts?pincode=560066
+   -> fakes set off no alert in Whitefield
+
+
+----------------------------------------------------------------
+4. FAKE: REPORT-BOMBING - 8 friends of a rival report a real bakery
+----------------------------------------------------------------
+Each friend has their own account and home network, so rules L1/L2 don't catch them. What does:
+L3 copy-pasted notes merge into one source, and L4 coordination (brand-new accounts, all within
+an hour, one area, copy-paste/empty notes, nobody lost money) blocks KNOWN_SCAM. (Judges: 40 friends.)
+
+POST /reports   friend 1  -> 201
+{
+  "report_id": "demo_010717_018",
+  "occurred_at": "2026-11-01T06:17:13+05:30",
+  "reported_at": "2026-11-01T06:29:13+05:30",
+  "reporter_id": "r_friend1_010717",
+  "ip_prefix": "60.10.3",
+  "channel": "Phone call",
+  "scam_type": "fake-customer-care",
+  "identifier_type": "phone",
+  "identifier_value": "9604481746",
+  "pincode": "560010",
+  "locality": "Rajajinagar",
+  "city": "Bengaluru",
+  "note": "This bakery is cheating customers, fake number, do not call or pay them!!",
+  "has_screenshot": false,
+  "amount_lost_inr": 0
+}
+
+POST /reports   friend 2  -> 201
+{"report_id": "demo_010717_019", "occurred_at": "2026-11-01T06:23:13+05:30", "reported_at": "2026-11-01T06:35:13+05:30", "reporter_id": "r_friend2_010717", "ip_prefix": "61.11.4", "channel": "Phone call", "scam_type": "fake-customer-care", "identifier_type": "phone", "identifier_value": "9604481746", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "This bakery is cheating customers, fake number, do not call or pay them!!", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   friend 3  -> 201
+{"report_id": "demo_010717_020", "occurred_at": "2026-11-01T06:29:13+05:30", "reported_at": "2026-11-01T06:41:13+05:30", "reporter_id": "r_friend3_010717", "ip_prefix": "62.12.5", "channel": "Phone call", "scam_type": "fake-customer-care", "identifier_type": "phone", "identifier_value": "9604481746", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "This bakery is cheating customers, fake number, do not call or pay them!!", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   friend 4  -> 201
+{"report_id": "demo_010717_021", "occurred_at": "2026-11-01T06:35:13+05:30", "reported_at": "2026-11-01T06:47:13+05:30", "reporter_id": "r_friend4_010717", "ip_prefix": "63.13.6", "channel": "Phone call", "scam_type": "fake-customer-care", "identifier_type": "phone", "identifier_value": "9604481746", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   friend 5  -> 201
+{"report_id": "demo_010717_022", "occurred_at": "2026-11-01T06:41:13+05:30", "reported_at": "2026-11-01T06:53:13+05:30", "reporter_id": "r_friend5_010717", "ip_prefix": "64.14.7", "channel": "Phone call", "scam_type": "fake-customer-care", "identifier_type": "phone", "identifier_value": "9604481746", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "This bakery is cheating customers, fake number, do not call or pay them!!", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   friend 6  -> 201
+{"report_id": "demo_010717_023", "occurred_at": "2026-11-01T06:47:13+05:30", "reported_at": "2026-11-01T06:59:13+05:30", "reporter_id": "r_friend6_010717", "ip_prefix": "65.15.8", "channel": "Phone call", "scam_type": "fake-customer-care", "identifier_type": "phone", "identifier_value": "9604481746", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "scam", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   friend 7  -> 201
+{"report_id": "demo_010717_024", "occurred_at": "2026-11-01T06:53:13+05:30", "reported_at": "2026-11-01T07:05:13+05:30", "reporter_id": "r_friend7_010717", "ip_prefix": "66.16.9", "channel": "Phone call", "scam_type": "fake-customer-care", "identifier_type": "phone", "identifier_value": "9604481746", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "This bakery is cheating customers, fake number, do not call or pay them!!", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   friend 8  -> 201
+{"report_id": "demo_010717_025", "occurred_at": "2026-11-01T06:59:13+05:30", "reported_at": "2026-11-01T07:11:13+05:30", "reporter_id": "r_friend8_010717", "ip_prefix": "67.17.10", "channel": "Phone call", "scam_type": "fake-customer-care", "identifier_type": "phone", "identifier_value": "9604481746", "pincode": "560010", "locality": "Rajajinagar", "city": "Bengaluru", "note": "", "has_screenshot": false, "amount_lost_inr": 0}
+
+GET /lookup   type = phone   value = 9604481746
+   -> NOT KNOWN_SCAM, hidden   (8 reports, but NOT Known scam, and still hidden)
+
+GET /alerts?pincode=560010
+   -> fakes set off no alert in Rajajinagar (+2 bonus)
+
+
+----------------------------------------------------------------
+5. FAKE: REPORTING A VERIFIED BUSINESS (Fresh Bakes, from the brief's verified list)
+----------------------------------------------------------------
+The verified list wins over any number of reports. Reporting a verified business also lowers
+those reporters' trust (L5) for their other reports.
+
+POST /reports   rival 1  -> 201
+{
+  "report_id": "demo_010717_026",
+  "occurred_at": "2026-11-01T06:23:13+05:30",
+  "reported_at": "2026-11-01T06:35:13+05:30",
+  "reporter_id": "r_rival1_010717",
+  "ip_prefix": "88.1.7",
+  "channel": "Phone call",
+  "scam_type": "fake-customer-care",
+  "identifier_type": "phone",
+  "identifier_value": "+91 80 4100 2233",
+  "pincode": "560038",
+  "locality": "Indiranagar",
+  "city": "Bengaluru",
+  "note": "This bakery is cheating customers, fake number, do not call or pay them!!",
+  "has_screenshot": false,
+  "amount_lost_inr": 0
+}
+
+POST /reports   rival 2  -> 201
+{"report_id": "demo_010717_027", "occurred_at": "2026-11-01T06:35:13+05:30", "reported_at": "2026-11-01T06:47:13+05:30", "reporter_id": "r_rival2_010717", "ip_prefix": "88.2.7", "channel": "Phone call", "scam_type": "fake-customer-care", "identifier_type": "phone", "identifier_value": "+91 80 4100 2233", "pincode": "560038", "locality": "Indiranagar", "city": "Bengaluru", "note": "This bakery is cheating customers, fake number, do not call or pay them!!", "has_screenshot": false, "amount_lost_inr": 0}
+
+POST /reports   rival 3  -> 201
+{"report_id": "demo_010717_028", "occurred_at": "2026-11-01T06:47:13+05:30", "reported_at": "2026-11-01T06:59:13+05:30", "reporter_id": "r_rival3_010717", "ip_prefix": "88.3.7", "channel": "Phone call", "scam_type": "fake-customer-care", "identifier_type": "phone", "identifier_value": "+91 80 4100 2233", "pincode": "560038", "locality": "Indiranagar", "city": "Bengaluru", "note": "This bakery is cheating customers, fake number, do not call or pay them!!", "has_screenshot": false, "amount_lost_inr": 0}
+
+GET /lookup   type = phone   value = +91 80 4100 2233
+   -> VERIFIED_BUSINESS   (still Verified business)
+
+
+----------------------------------------------------------------
+6. FAKE: JUNK AND BAD INPUT - rejected straight away
+----------------------------------------------------------------
+Junk numbers are refused with 400 and never stored. An unknown scam type is NOT rejected: it is
+kept as "other" (the brief says so).
+
+POST /reports   number "12345"  -> 400
+{"report_id": "demo_010717_j1", "occurred_at": "2026-10-31T22:17:13+05:30", "reported_at": "2026-10-31T22:29:13+05:30", "reporter_id": "r_junk_010717", "ip_prefix": "103.21.58", "channel": "Phone call", "scam_type": "digital-arrest", "identifier_type": "phone", "identifier_value": "12345", "pincode": "560102", "locality": "HSR Layout", "city": "Bengaluru", "note": "Video call from a man in police uniform saying a parcel with drugs was in my name", "has_screenshot": true, "amount_lost_inr": 0}
+
+POST /reports   number "test"  -> 400
+{"report_id": "demo_010717_j2", "occurred_at": "2026-10-31T22:17:13+05:30", "reported_at": "2026-10-31T22:29:13+05:30", "reporter_id": "r_junk_010717", "ip_prefix": "103.21.58", "channel": "Phone call", "scam_type": "digital-arrest", "identifier_type": "phone", "identifier_value": "test", "pincode": "560102", "locality": "HSR Layout", "city": "Bengaluru", "note": "Video call from a man in police uniform saying a parcel with drugs was in my name", "has_screenshot": true, "amount_lost_inr": 0}
+
+POST /reports   unknown pincode 999999  -> 400
+{"report_id": "demo_010717_j3", "occurred_at": "2026-10-31T22:17:13+05:30", "reported_at": "2026-10-31T22:29:13+05:30", "reporter_id": "r_junk_010717", "ip_prefix": "103.21.58", "channel": "Phone call", "scam_type": "digital-arrest", "identifier_type": "phone", "identifier_value": "8612325634", "pincode": "999999", "locality": "HSR Layout", "city": "Bengaluru", "note": "Video call from a man in police uniform saying a parcel with drugs was in my name", "has_screenshot": true, "amount_lost_inr": 0}
+
+POST /reports   occurred_at a month in the FUTURE  -> 400
+{"report_id": "demo_010717_j4", "occurred_at": "2026-12-01T07:17:13+05:30", "reported_at": "2026-11-01T07:17:13+05:30", "reporter_id": "r_junk_010717", "ip_prefix": "103.21.58", "channel": "Phone call", "scam_type": "digital-arrest", "identifier_type": "phone", "identifier_value": "7973997446", "pincode": "560102", "locality": "HSR Layout", "city": "Bengaluru", "note": "Video call from a man in police uniform saying a parcel with drugs was in my name", "has_screenshot": true, "amount_lost_inr": 0}
+
+POST /reports   unknown scam_type "alien-attack"  -> 201 (saved as "other")
+{"report_id": "demo_010717_029", "occurred_at": "2026-11-01T05:17:13+05:30", "reported_at": "2026-11-01T05:29:13+05:30", "reporter_id": "r_odd_010717", "ip_prefix": "14.15.16", "channel": "Phone call", "scam_type": "alien-attack", "identifier_type": "phone", "identifier_value": "7009132642", "pincode": "560102", "locality": "HSR Layout", "city": "Bengaluru", "note": "Some new kind of trick I have not seen before", "has_screenshot": false, "amount_lost_inr": 0}
+
+GET /lookup   type = phone   value = 12345
+   -> 400   (lookup of junk  -> 400 (not a valid number))
+
+
+----------------------------------------------------------------
+7. UPI IDs, LINKS, SMS SENDERS, VERIFIED NUMBERS, NEVER REPORTED
+----------------------------------------------------------------
+Every format is stored in one standard form ([PRD §A.0] rule 3).
+
+POST /reports   UPI ID typed in capitals  -> 201
+{
+  "report_id": "demo_010717_030",
+  "occurred_at": "2026-11-01T02:17:13+05:30",
+  "reported_at": "2026-11-01T02:29:13+05:30",
+  "reporter_id": "r_neha_010717",
   "ip_prefix": "59.88.1",
   "channel": "UPI request",
   "scam_type": "upi-refund-qr",
   "identifier_type": "upi",
-  "identifier_value": "Refund.Help@OKAXIS",
+  "identifier_value": "Refund.Help965@OKAXIS",
   "pincode": "560076",
   "locality": "BTM Layout",
   "city": "Bengaluru",
@@ -128,23 +328,20 @@ EXAMPLE 3 - UPI ID
   "amount_lost_inr": 4999
 }
 
-LOOKUP   type = upi   value = refund.help@okaxis
-  -> SUSPICIOUS, display_value r***@okaxis
+GET /lookup   type = upi   value = refund.help965@okaxis
+   -> SUSPICIOUS, hidden   (looked up in small letters -> same UPI ID, hidden like r***@okaxis)
 
-
-------------------------------------------------
-EXAMPLE 4 - Fake bank link
-------------------------------------------------
+POST /reports   link with http, www and ?utm  -> 201
 {
-  "report_id": "rep_030",
-  "occurred_at": "2026-10-31T08:00:00+05:30",
-  "reported_at": "2026-10-31T08:30:00+05:30",
-  "reporter_id": "r_kiran30",
+  "report_id": "demo_010717_031",
+  "occurred_at": "2026-11-01T03:17:13+05:30",
+  "reported_at": "2026-11-01T03:29:13+05:30",
+  "reporter_id": "r_kiran_010717",
   "ip_prefix": "106.51.7",
   "channel": "Fake website",
   "scam_type": "fake-kyc-link",
   "identifier_type": "url",
-  "identifier_value": "http://www.sbi-kyc.in/pay?utm=sms",
+  "identifier_value": "http://www.sbi-kyc66.in/pay?utm=sms",
   "pincode": "560011",
   "locality": "Jayanagar",
   "city": "Bengaluru",
@@ -153,87 +350,153 @@ EXAMPLE 4 - Fake bank link
   "amount_lost_inr": 0
 }
 
-LOOKUP   type = url   value = sbi-kyc.in/pay
-  -> SUSPICIOUS, display_value sbi***.in/...
+GET /lookup   type = url   value = sbi-kyc66.in/pay
+   -> SUSPICIOUS, hidden   (looked up without https/www/?utm -> same link, hidden like sbi***.in/...)
+
+GET /lookup   type = sender_id   value = VM-HDFCBK
+   -> VERIFIED_BUSINESS   (SMS sender with the phone's prefix -> HDFCBK)
+
+GET /lookup   type = phone   value = 1930
+   -> VERIFIED_BUSINESS   (cybercrime helpline)
+
+GET /lookup   type = phone   value = 1800 1600
+   -> VERIFIED_BUSINESS   (HDFC Bank toll-free)
+
+GET /lookup   type = upi   value = freshbakes@okaxis
+   -> VERIFIED_BUSINESS   (Fresh Bakes' UPI)
+
+GET /lookup   type = phone   value = 9338441844
+   -> NO_REPORTS   (a valid number nobody reported -> 200 NO_REPORTS (not 404))
 
 
-------------------------------------------------
-EXAMPLE 5 - Verified numbers (no report needed)
-------------------------------------------------
-LOOKUP   type = phone       value = 1800 1600           -> VERIFIED_BUSINESS (HDFC Bank)
-LOOKUP   type = phone       value = 1930                -> VERIFIED_BUSINESS (Cybercrime Helpline)
-LOOKUP   type = sender_id   value = VM-HDFCBK           -> VERIFIED_BUSINESS
-LOOKUP   type = upi         value = freshbakes@okaxis   -> VERIFIED_BUSINESS (Fresh Bakes)
+----------------------------------------------------------------
+8. MAP - only the last 7 days, only area points
+----------------------------------------------------------------
+Clusters use the AREA's map point from the brief, never a person's location. Severity: CRIT >= 10,
+HIGH >= 5, else MED; one level higher for digital arrest / sextortion / a loss >= 50,000.
 
+GET /map?pincode=560102
+   -> HSR Layout cluster (default 7 days, 2 km)
 
-------------------------------------------------
-EXAMPLE 6 - Things that must FAIL / edge cases
-------------------------------------------------
-LOOKUP   type = phone   value = 12345        -> 400 (junk)
-LOOKUP   type = phone   value = 9000000001   -> 200 NO_REPORTS (valid, never reported - not 404)
+GET /map?pincode=560102&radius_km=5
+   -> also nearby areas with reports (Koramangala, BTM ...)
 
-POST Report A again but change these lines:
-  "report_id": "rep_x1",  "identifier_value": "test"      -> 400 invalid identifier_value
-  "report_id": "rep_x2",  "pincode": "999999"             -> 400 unknown pincode
-  "report_id": "rep_x3",  "occurred_at": "2027-01-01T10:00:00+05:30"  -> 400 occurred_at is in the future
-  "report_id": "rep_x4",  "scam_type": "alien-attack"     -> 201 (accepted, saved as "other")
-
-
-------------------------------------------------
-EXAMPLE 7 - MAP and ALERTS  (GET /map, GET /alerts)
-------------------------------------------------
-Only TRUSTED reports count (one per independent person), and only reports from the last N days.
-After sending Examples 1-4 above:
-
-GET /map     pincode = 560102                         -> HSR Layout cluster (default 7 days, 2 km)
-GET /map     pincode = 560102   radius_km = 5         -> also Koramangala, BTM Layout, Jayanagar... if they have reports
-GET /map     pincode = (empty)                        -> every area with reports (city/India view)
-GET /map     pincode = 999999                         -> 400 unknown pincode
-Each cluster: pincode, locality, city, count, top_scam_type, severity (CRIT >=10, HIGH >=5, else MED;
-one level higher for digital-arrest / sextortion / loss >= 50,000), lat/lng = the AREA's point.
-
-GET /alerts  pincode = 560102                         -> {"alerts": []}  (nothing unusual yet)
-
-To see a NEW_TYPE alert: send 2 reports of a scam type the area hasn't had, from 2 different
-people/networks with their own notes and new numbers, e.g. pincode 560064 (Yelahanka):
+POST /reports   a report from 30 days ago, in Hebbal  -> 201 (stored)
 {
-  "occurred_at": "2026-10-31T15:00:00+05:30",
-  "reporter_id": "r_newtype1", "ip_prefix": "77.1.1",
-  "channel": "SMS or WhatsApp", "scam_type": "job-offer",
-  "identifier_type": "phone", "identifier_value": "9811122233",
-  "pincode": "560064",
-  "note": "Telegram task job, first paid 200 then asked a 5000 deposit"
+  "report_id": "demo_010717_032",
+  "occurred_at": "2026-10-02T07:17:13+05:30",
+  "reported_at": "2026-10-02T07:29:13+05:30",
+  "reporter_id": "r_old_010717",
+  "ip_prefix": "21.22.23",
+  "channel": "Phone call",
+  "scam_type": "otp-call",
+  "identifier_type": "phone",
+  "identifier_value": "7450243754",
+  "pincode": "560024",
+  "locality": "Hebbal",
+  "city": "Bengaluru",
+  "note": "Got this call last month asking for my card OTP",
+  "has_screenshot": false,
+  "amount_lost_inr": 0
 }
-(second one: reporter_id r_newtype2, ip_prefix 77.2.2, identifier_value 9822233344, a different note)
-GET /alerts  pincode = 560064   -> NEW_TYPE job-offer
-(In an area that already had reports in the last 30 days, ONE such report is enough.)
 
-A SPIKE needs >= 5 trusted reports in the last 24 h AND at least double the daily average of the
-week before. That is easiest to see with:  python tools/scenarios.py --base http://localhost:8000
+GET /map?pincode=560024&radius_km=1
+   -> Hebbal is NOT on the map: month-old reports don't count
+
+GET /map?pincode=999999
+   -> unknown area  -> 400
 
 
-------------------------------------------------
-EXAMPLE 8 - DISPUTE (POST /challenges)  "that is our real number"
-------------------------------------------------
-First make Example 1 (3 people) so the number is KNOWN_SCAM, then:
-POST /challenges
+----------------------------------------------------------------
+9. ALERTS - something unusual in an area
+----------------------------------------------------------------
+NEW_TYPE: a scam type the area hasn't had in 30 days. SPIKE: >= 5 reports in 24 h AND at least
+double the area's daily average of the week before. Only trusted reports count, so fakes never
+set one off (sections 3 and 4).
+
+POST /reports   1st electricity-bill scam in Yelahanka  -> 201
+{
+  "report_id": "demo_010717_033",
+  "occurred_at": "2026-11-01T06:05:13+05:30",
+  "reported_at": "2026-11-01T06:17:13+05:30",
+  "reporter_id": "r_nt1_010717",
+  "ip_prefix": "77.1.1",
+  "channel": "SMS or WhatsApp",
+  "scam_type": "electricity-disconnection",
+  "identifier_type": "phone",
+  "identifier_value": "8319539564",
+  "pincode": "560064",
+  "locality": "Yelahanka",
+  "city": "Bengaluru",
+  "note": "SMS said power will be cut tonight, pay the pending bill on this number",
+  "has_screenshot": false,
+  "amount_lost_inr": 3000
+}
+
+POST /reports   2nd, different person, network and words  -> 201
+{
+  "report_id": "demo_010717_034",
+  "occurred_at": "2026-11-01T06:41:13+05:30",
+  "reported_at": "2026-11-01T06:53:13+05:30",
+  "reporter_id": "r_nt2_010717",
+  "ip_prefix": "77.2.2",
+  "channel": "Phone call",
+  "scam_type": "electricity-disconnection",
+  "identifier_type": "phone",
+  "identifier_value": "9510665617",
+  "pincode": "560064",
+  "locality": "Yelahanka",
+  "city": "Bengaluru",
+  "note": "Caller claimed to be from BESCOM and asked me to pay 1,800 immediately",
+  "has_screenshot": true,
+  "amount_lost_inr": 0
+}
+
+GET /alerts?pincode=560064
+   -> NEW_TYPE electricity-disconnection in Yelahanka
+
+GET /alerts?pincode=560103
+   -> with the demo data loaded: SPIKE in Bellandur (10 today vs ~2 a day)
+
+GET /alerts?pincode=560037
+   -> with the demo data loaded: Marathahalli is busy every day -> no alert
+
+
+----------------------------------------------------------------
+10. DISPUTE - "that is our real number" (bonus)
+----------------------------------------------------------------
+Anyone can file a dispute. It never deletes reports; the number is shown as "under review",
+hidden again, and can't be KNOWN_SCAM until reviewed. The claimant's details are never shown or logged.
+
+POST /challenges   dispute the number from section 1  -> 201 {challenge_id, status: under_review}
 {
   "identifier_type": "phone",
-  "identifier_value": "09876543210",
+  "identifier_value": "09584451121",
   "claimant_name": "Sharma Sweets",
   "contact_email": "owner@example.com",
   "proof_note": "GST certificate and shop licence attached."
 }
--> 201 {"challenge_id": "chal_1", "status": "under_review"}
 
-LOOKUP   type = phone   value = 9876543210
-  -> "challenged": true, verdict SUSPICIOUS (never KNOWN_SCAM while under review),
-     message "A business has disputed these reports - under review", report_count still 3
-Bad disputes -> 400: "identifier_value": "12345" / "claimant_name": "" / "contact_email": "not-an-email"
-Verified numbers stay VERIFIED_BUSINESS even if disputed.
+GET /lookup   type = phone   value = 9584451121
+   -> NOT KNOWN_SCAM, report_count 3, challenged: true, hidden   (challenged: true, no longer KNOWN_SCAM, hidden again, reports still counted)
+
+POST /challenges   bad email  -> 400
+{
+  "identifier_type": "phone",
+  "identifier_value": "9584451121",
+  "claimant_name": "Sharma Sweets",
+  "contact_email": "not-an-email",
+  "proof_note": "x"
+}
 
 
-------------------------------------------------
-FINISH
-------------------------------------------------
-POST /admin/reset -> Execute   (always on the live server)
+----------------------------------------------------------------
+11. LICENCE (on the laptop with private.key, PowerShell, repo root)
+----------------------------------------------------------------
+$P = "server\.venv\Scripts\python"
+& $P tools\upload_license.py --show --live                     # VALID, long licence
+& $P tools\make_license.py --licensee "Demo Bank" --minutes 5 --out licenses\short.json
+& $P tools\upload_license.py licenses\short.json --live         # 5 minutes left
+   wait 5 min -> the website locks by itself; /lookup -> 403 LICENSE_EXPIRED; /health still 200
+& $P tools\upload_license.py licenses\long.json --live          # unlocked, same data, no restart
+ALWAYS finish with the long licence.
