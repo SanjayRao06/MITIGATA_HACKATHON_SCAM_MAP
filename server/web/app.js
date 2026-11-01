@@ -598,7 +598,7 @@ function resultCard(r, typed, idType) {
         <button type="button" class="btn btn-quiet btn-sm speak-btn" data-speak="${esc(spoken)}">${icon("volume")} ${t("speak_btn")}</button>` : "";
   const shareBtn = `
         <a class="btn btn-sm share-btn" target="_blank" rel="noopener"
-           href="https://wa.me/?text=${encodeURIComponent(shareMessage(r, idType, sub))}">${icon("message")} ${t("share_btn")}</a>`;
+           href="https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage(r, idType, sub))}">${icon("message")} ${t("share_btn")}</a>`;
 
   return `
     <div class="result ${cls}">
