@@ -57,10 +57,10 @@ Never commit `.env.local`, `.neon`, `private.key`, `licenses/`, `dev.db` (alread
 | P2 | **Licence** + 2 licence files | 15 | **Sanjay** | ✅ done on live (2026-11-01: lock with 403, unlock with no restart, website auto-locks without reload; long valid until 2027-10-31) | README licence section (P8); make the 5-min file fresh on demo day |
 | P3 | **Map + alerts** APIs | 10 + 2 | **Avi** | ✅ 42/42 scenario checks (16/16 random runs) | — |
 | P4 | **Disputes** (`/challenges`) | +2 | **Avi** | ✅ done | — |
-| P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ⬜ | after P4 |
-| P6 | **Frontend** (all 9 pages) + **Hindi + icons** | 15 | **Avi** | 🟡 built & live; needs a real-phone stopwatch test | test on a phone (EN, HI, icons) |
-| P7 | **Ops**: keep-awake, frontend deploy, live run of all scenarios | protects all | **Sanjay** | 🟡 UptimeRobot on | 7.2–7.6 |
-| P8 | **README + video + pitch + rehearsal** | 10 | **both** (split below) | ⬜ | grows as we go; finish last |
+| P5 | **Privacy + speed audit** | protects 15 + 15 | **Avi** | ✅ done (17 audit tests; live server time 7 ms median, 10 ms p95) | — |
+| P6 | **Frontend** (all 9 pages) + **Hindi + icons** | 15 | **Avi** | ✅ done & live; phone-tested in Hindi and icons-only | — (6.11 type grouping skipped, optional) |
+| P7 | **Ops**: keep-awake, frontend deploy, live run of all scenarios | protects all | **Sanjay** | ✅ done (UptimeRobot, auto-deploy, demo data on live, `KEEP_DB_AWAKE=1`) | — |
+| P8 | **README + video + pitch + rehearsal** | 10 | **both** (split below) | 🟡 demo data loader done | README, screen recording, PPT deck |
 | P9 | Extras: Hindi voice (Sarvam), explain panel, lookalike domains, QR | tie-break | whoever is free | ⬜ | only if time |
 Legend: ⬜ not started · 🟡 in progress · ✅ done
 
