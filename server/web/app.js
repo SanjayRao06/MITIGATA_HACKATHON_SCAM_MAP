@@ -522,14 +522,19 @@ function whyPanel(r) {
  * The WhatsApp warning text for a lookup result ("Share on WhatsApp"), in the current language.
  * Privacy (docs/04): it shares only what's already on screen. A number with fewer than 3
  * independent reporters stays masked (98XXXXX210) and the link then opens the plain Check page,
- * so the full number never travels in the message. Careful wording (docs/04): it only ever says "reported".
+ * so the full number never travels in the message. Careful wording: "reported", never accusing words.
+ * The warning names the reported scam type and gives THAT type's safety tip (e.g. "You never scan a
+ * QR to RECEIVE money"), because specific advice is what stops the next family member from paying.
  * In: the /lookup reply, the identifier type, the card's sub-line (business name for verified).
  */
 function shareMessage(r, idType, sub) {
   const value = r.display_value;
   const link = r.masked ? `${location.origin}/#/check`
     : `${location.origin}/#/check?value=${encodeURIComponent(value)}&type=${idType}`;
-  const vars = { value, link, n: fmtNum(r.distinct_reporters || 0), business: sub || t("v_verified") };
+  // 1) Scam type: its name in brackets (left out for "other"/unknown) and that type's own safety tip.
+  const type = SCAM_INFO[S.lang][r.scam_type] && r.scam_type !== "other" ? r.scam_type : null;
+  const vars = { value, link, n: fmtNum(r.distinct_reporters || 0), business: sub || t("v_verified"),
+                 type: type ? ` (${scamName(type)})` : "", tip: type ? scamAdvice(type) + " " : "" };
   if (r.verdict === "VERIFIED_BUSINESS") return t("share_verified", vars);
   const main = r.verdict === "NO_REPORTS" ? "share_none"
     : r.challenged ? "share_review" : r.verdict === "KNOWN_SCAM" ? "share_known" : "share_susp";

@@ -141,3 +141,15 @@ def test_web_reports_get_network_from_the_connection_and_store_only_a_hash():
         stored = conn.execute(select(db.reports.c.ip_hash)).scalar_one()
     assert stored == hash_value("49.36.12")          # first 3 parts, hashed
     assert "49.36" not in stored
+
+
+def test_whatsapp_share_text_names_the_scam_type_safely():
+    # The share message names the scam type and gives its own tip ({type}, {tip}) in both languages,
+    # uses "reported" wording, and avoids two-part emoji like the warning sign + U+FE0F, which some
+    # apps show as a broken character.
+    text = (WEB / "i18n.js").read_text(encoding="utf-8")
+    lines = [l for l in text.splitlines() if re.match(r"\s*share_(known|susp):", l)]
+    assert len(lines) == 4                                   # EN + HI, known + suspicious
+    for line in lines:
+        assert "{type}" in line and "{tip}" in line and "{value}" in line
+        assert "️" not in line

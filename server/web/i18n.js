@@ -178,10 +178,12 @@ const STRINGS = {
     speak_btn: "Read aloud",
     speak_stop: "Stop reading",
     speak_failed: "Couldn't play the audio right now. Please try again.",
-    // "Share on WhatsApp" on the Check result: the message text ({value} is masked below 3 reporters)
+    // "Share on WhatsApp" on the Check result: the message text ({value} is masked below 3 reporters).
+    // {type} is " (scam name)" or empty; {tip} is that scam type's own safety advice from SCAM_INFO.
+    // Single-character emoji only (🚨 ❗ ✅): two-part ones like ⚠️ show up as "�" in some apps.
     share_btn: "Share on WhatsApp",
-    share_known: "⚠️ Scam warning: {value} has been reported by {n} people on Scam Map. Don't share OTPs, don't pay, and don't install any app they ask for.\nCheck it yourself: {link}",
-    share_susp: "⚠️ Be careful: {value} has been reported on Scam Map, but it isn't confirmed yet. Don't share OTPs or pay anyone you don't know.\nCheck it yourself: {link}",
+    share_known: "🚨 Scam warning: {value} has been reported by {n} people on Scam Map{type}.\n{tip}Don't share OTPs and don't pay.\nCheck it yourself: {link}",
+    share_susp: "❗ Be careful: {value} has been reported on Scam Map{type}, but it isn't confirmed yet.\n{tip}Don't share OTPs or pay anyone you don't know.\nCheck it yourself: {link}",
     share_review: "{value} has some reports on Scam Map, but a business has disputed them and they are under review.\nCheck it yourself: {link}",
     share_none: "Got a call, SMS or payment request you're not sure about? Check the number, UPI ID or link on Scam Map before you trust it: {link}",
     share_verified: "✅ {value} is a verified number: {business}.\nCheck any number, UPI ID or link before you trust it: {link}",
@@ -345,8 +347,8 @@ const STRINGS = {
     speak_stop: "सुनना बंद करें",
     speak_failed: "अभी आवाज़ नहीं चल पाई। कृपया फिर कोशिश करें।",
     share_btn: "व्हाट्सऐप पर शेयर करें",
-    share_known: "⚠️ स्कैम चेतावनी: Scam Map पर {value} की {n} लोगों ने रिपोर्ट की है। OTP न बताएं, पैसे न भेजें, और उनके कहने पर कोई ऐप इंस्टॉल न करें।\nखुद जांचें: {link}",
-    share_susp: "⚠️ सावधान रहें: Scam Map पर {value} की रिपोर्ट हुई है, पर अभी पुष्टि नहीं हुई है। किसी अनजान को OTP न बताएं और पैसे न भेजें।\nखुद जांचें: {link}",
+    share_known: "🚨 स्कैम चेतावनी: Scam Map पर {value} की {n} लोगों ने रिपोर्ट की है{type}।\n{tip}OTP न बताएं, पैसे न भेजें।\nखुद जांचें: {link}",
+    share_susp: "❗ सावधान रहें: Scam Map पर {value} की रिपोर्ट हुई है{type}, पर अभी पुष्टि नहीं हुई है।\n{tip}किसी अनजान को OTP न बताएं और पैसे न भेजें।\nखुद जांचें: {link}",
     share_review: "Scam Map पर {value} की कुछ रिपोर्ट हैं, पर एक व्यवसाय ने उन पर आपत्ति की है और वे समीक्षा में हैं।\nखुद जांचें: {link}",
     share_none: "कोई कॉल, SMS या पेमेंट रिक्वेस्ट पर शक है? भरोसा करने से पहले नंबर, UPI ID या लिंक Scam Map पर जांचें: {link}",
     share_verified: "✅ {value} एक सत्यापित नंबर है: {business}।\nकिसी भी नंबर, UPI ID या लिंक पर भरोसा करने से पहले जांचें: {link}",
