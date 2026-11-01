@@ -220,9 +220,9 @@ Prompts: `docs/11-stitch-prompts.md`. Exports go to `web/stitch/`.
 - [x] 7.1 **UptimeRobot** monitor → `/health` every 5 min (Render free plan sleeps after ~15 min)
 - [x] 7.2 Confirm auto-deploy on push is on (Render → Settings) (confirmed 2026-11-01: every push went live in ~1-2 min)
 - [ ] 7.3 Deploy the frontend; check it works on the live https URL from a phone
-- [ ] 7.4 Run `scenarios.py` against the live server once (`--allow-remote-reset`), then reset
+- [x] 7.4 Run `scenarios.py` against the live server once (`--allow-remote-reset`), then reset (2026-11-01: 46/47 on live, only the 20-call laptop latency row; demo data kept for judging)
 - [x] 7.5 Long licence uploaded on live; `GET /license` valid through judging day
-- [ ] 7.6 Check Neon free compute hours. Keep-alive is off unless `KEEP_DB_AWAKE=1`: set it on Render the day before judging
+- [x] 7.6 Check Neon free compute hours. Keep-alive is off unless `KEEP_DB_AWAKE=1`: set it on Render the day before judging (2026-11-01: `KEEP_DB_AWAKE=1` set on Render for judging day)
 
 ### P8 — README, video, pitch, rehearsal (10 pts) · read docs/09
 - [ ] 8.1 README: what it is, live URL, run locally in 3 commands, every endpoint with copy-paste examples
