@@ -35,6 +35,8 @@ def run_walkthrough(with_demo_data: bool) -> list[str]:
     for sec in demo.build(seed=11):
         for st in sec["steps"]:
             where = f"[{sec['title'][:40]}] {st.get('say', '')}"
+            if st["kind"] == "text":                      # by-hand website steps: nothing to replay
+                continue
             if st["kind"] in ("report", "challenge"):
                 path = "/reports" if st["kind"] == "report" else "/challenges"
                 r = client.post(path, json=st["body"])
@@ -99,6 +101,6 @@ def test_file_is_written_with_every_section(tmp_path, monkeypatch):
     monkeypatch.setattr(demo, "ROOT", tmp_path)
     demo.main()
     text = (tmp_path / "demo.txt").read_text(encoding="utf-8")
-    for heading in ("REAL SCAM", "SPAMMING", "ONE WI-FI", "REPORT-BOMBING", "VERIFIED BUSINESS", "JUNK",
-                    "MAP", "ALERTS", "DISPUTE", "LICENCE"):
+    for heading in ("NORMAL REPORTS ON THE WEBSITE", "REAL SCAM", "SPAMMING", "ONE WI-FI", "REPORT-BOMBING",
+                    "VERIFIED BUSINESS", "JUNK", "MAP", "ALERTS", "DISPUTE", "LICENCE"):
         assert heading in text
