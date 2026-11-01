@@ -101,6 +101,6 @@ def test_file_is_written_with_every_section(tmp_path, monkeypatch):
     monkeypatch.setattr(demo, "ROOT", tmp_path)
     demo.main()
     text = (tmp_path / "demo.txt").read_text(encoding="utf-8")
-    for heading in ("REAL SCAM", "SPAMMER", "ONE WI-FI", "WI-FI FARM ON A PHONE", "REPORT-BOMBING",
-                    "VERIFIED BUSINESS", "JUNK", "NORMAL REPORT", "DISPUTE", "47/47", "LICENCE"):
+    for heading in ("REAL SCAM", "SPAMMER", "ONE WI-FI", "REPORT-BOMBING", "VERIFIED BUSINESS", "JUNK",
+                    "MAP", "ALERTS", "DISPUTE", "LICENCE", "47/47", "POST /reports", "GET /lookup"):
         assert heading in text
