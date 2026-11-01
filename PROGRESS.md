@@ -97,7 +97,7 @@ tests must still pass with a valid test licence loaded).
 | 3 | Map + alerts: spike → alert, normal → none, new type → alert, month-old not on map | 10 | Test tool | P3 | ✅ |
 | 4 | Privacy: < 3 reporters hidden, map never shows a person's location, careful wording. **Reporter identifiable = disqualified** | 15 | Test tool + judge | P0 ✅, P5, P6 | backend ✅ |
 | 5 | Server + licence: 4-step live demo on https, **no restart** | 15 | Judge | P2 | ✅ |
-| 6 | Easy to report: phone + stopwatch < 60 s; works in **Hindi or icons only**; **no login** | 15 | Judge | P6 | 🟡 built, not yet timed on a phone |
+| 6 | Easy to report: phone + stopwatch < 60 s; works in **Hindi or icons only**; **no login** | 15 | Judge | P6 | ✅ timed on a phone: well under 60 s (2026-11-01) |
 | 7 | Demo + code: runs from README; trust rules + licence explained; pitch | 10 | Judge | P8 | ❌ |
 | B1 | Verified businesses/helplines → "Verified business" | +3 | Test tool | P0 | ✅ |
 | B2 | Dispute feature | +2 | Test tool | P4 | ✅ |
@@ -342,6 +342,38 @@ what stops editing the licence date · what if the clock is set back · how is l
 
 ## 10. Done log (newest first)
 Each entry: what was built (simple words), files touched, how to test it, known gaps.
+
+### WhatsApp share names the scam type + report timed on a phone — 2026-11-01
+**What was built (simple terms):**
+- "Share on WhatsApp" (Check page) now says WHICH scam it is, e.g. "(UPI refund QR)", and gives that
+  type's own safety tip ("You never scan a QR or enter a PIN to RECEIVE money"), in English and Hindi.
+  Unknown/"other" types fall back to the general line. Masking and "reported" wording are unchanged.
+- The two-part warning emoji (shown as "�" on some phones) is replaced by single-character 🚨 / ❗.
+- Report flow timed on a real phone with a stopwatch: well under 60 seconds (rubric row 6).
+
+**Files touched:** `server/web/app.js` (`shareMessage`), `server/web/i18n.js`, `server/tests/test_web.py`, `PROGRESS.md`
+
+**How to test:** `cd server; .venv\Scripts\python -m pytest -q tests/test_web.py` → 14 passed.
+On the site: Check a Known-scam UPI ID → Share on WhatsApp → message shows the scam type and its tip.
+
+### PRD audit + two trust fixes — 2026-11-01
+**What was built (simple terms):**
+- Full audit against `docs/00-prd.md` with an independent probe (~130 checks: every phone/UPI/link/sender
+  format, every verified entry, junk 400s, masking, evidence, map radius/days, SPIKE/NEW_TYPE, disputes, reset, 429).
+- Fix 1 (trust L4): a real wave hitting ONE area within an hour (all new people, nobody lost money yet) was
+  wrongly called "organised". Now, if 80%+ of people wrote their own unique words from their own networks,
+  it is "independent voices" and can be Known scam.
+- Fix 2 (alerts): SPIKE and NEW_TYPE now count PEOPLE, not reports, so one person reporting several
+  different numbers can't set off an alert (+2 bonus safety).
+
+**Files touched:** `server/app/trust.py`, `server/app/alerts.py`, `server/tests/test_trust.py`,
+`server/tests/test_map_alerts.py`, `README.md`, `docs/03-trust-rules.md`, `PROGRESS.md`
+
+**How to test:** `cd server; .venv\Scripts\python -m pytest -q` → 241 passed.
+`server\.venv\Scripts\python tools\scenarios.py --seed 7` → 47/47 checks passed.
+
+**Known gaps (deliberate):** 6+ new people with EMPTY notes in a 1-hour burst stay Suspicious (can't be told
+apart from a bombing). In an area with no reports in the last 30 days, NEW_TYPE waits for a 2nd person.
 
 ### P6 round 3 — Licence status line + scam types in 4 groups — 2026-11-01
 **What was built (simple terms):**

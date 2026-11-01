@@ -13,6 +13,8 @@ How one identifier's reports are judged (assess() below):
   L4 Coordination     - for 3+ people we score 6 warning signs (burst, all new accounts, few
                         networks, one area, empty/duplicate notes, nobody lost money). Score >= 0.6
                         means "looks organised": brand-new accounts count x0.2 and KNOWN_SCAM is blocked.
+                        Exception: if >= 80% of people wrote their own unique words from their own
+                        networks, it is a real wave of independent voices, not an organised one.
   L5 Reputation       - new reporter 0.6; a track record on other numbers raises it to 0.8 / 1.0;
                         someone who reported a verified business drops to 0.3.
 Then: a source is TRUSTED if its weight >= 0.5. KNOWN_SCAM needs >= 3 trusted sources from >= 3
@@ -40,6 +42,11 @@ COORD_MIN_PEOPLE = 3            # L4 only makes sense with at least this many pe
 COORD_THRESHOLD = 0.6           # score at/above this = coordinated wave
 COORD_PENALTY = 0.2             # brand-new accounts in a coordinated wave count this much
 BURST_WINDOW = timedelta(hours=2)
+# A wave is NOT organised when this share (or more) of its people wrote their own unique words AND
+# came from different networks: that is exactly how the brief describes a real campaign ([PRD §4]
+# "many different, unrelated people writing in their own words"). Without this, a real wave that
+# hits ONE neighbourhood within an hour (all new accounts, nobody lost money yet) looked organised.
+INDEPENDENT_VOICES = 0.8
 
 REP_NEW = 0.6                   # L5: first-time reporter
 REP_SOME_HISTORY = 0.8          # 2+ other numbers reported earlier
@@ -210,7 +217,12 @@ def assess(reports: list, history: dict, flagged: set, verified: bool) -> dict:
 
     # ---- L4: is the whole set an organised wave? --------------------------------------------
     coord, signals = coordination(people, reports)
-    coordinated = coord >= COORD_THRESHOLD
+    # Real waves are many unrelated people in their own words: if (nearly) everyone wrote a
+    # personal, non-copied note from their own network, burst + one area alone don't make it fake.
+    independent_voices = bool(signals) and (
+        1 - signals["low_text_diversity"] >= INDEPENDENT_VOICES
+        and 1 - signals["low_net_diversity"] >= INDEPENDENT_VOICES)
+    coordinated = coord >= COORD_THRESHOLD and not independent_voices
 
     # ---- L5 + weights: one weight per merged source -----------------------------------------
     sources = {}
@@ -253,6 +265,7 @@ def assess(reports: list, history: dict, flagged: set, verified: bool) -> dict:
             "source_weights": sorted(weights, reverse=True),
             "coordination_score": coord,
             "coordination_signals": signals,
+            "independent_voices": independent_voices,
             "coordinated": coordinated,
             "trusted_sources": trusted_sources,
             "trusted_networks": len(trusted_nets),

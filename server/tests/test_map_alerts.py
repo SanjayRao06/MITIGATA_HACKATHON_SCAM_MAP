@@ -173,6 +173,24 @@ def test_new_type_in_quiet_area_waits_for_second_report():
     assert [a["scam_type"] for a in alerts(HSR) if a["type"] == "NEW_TYPE"] == ["sextortion"]
 
 
+def test_one_person_on_many_numbers_fires_no_alert():
+    # One reporter files 3 different numbers of a new type in a quiet area, then 3 more an hour
+    # later (6 trusted reports, one per number). Alerts count people, so this is still one person:
+    # no NEW_TYPE (quiet area needs 2 people) and no SPIKE (needs 5).
+    for i in range(6):
+        real(HSR, 1 + i * 0.4, scam_type="sextortion", reporter_id="one_busy_person",
+             ip_prefix="10.200.1")
+    assert alerts(HSR) == []
+
+
+def test_spike_counts_people_not_reports():
+    # 2 people each report 3 numbers today: 6 reports but only 2 people -> no SPIKE.
+    for who in ("person_a", "person_b"):
+        for i in range(3):
+            real(BTM, 1 + i * 0.3, reporter_id=who, ip_prefix=f"10.201.{len(who)}{i}")
+    assert not [a for a in alerts(BTM) if a["type"] == "SPIKE"]
+
+
 def test_known_type_is_not_new():
     real(HSR, 5 * 24, scam_type="otp-call")
     real(HSR, 2, scam_type="otp-call")

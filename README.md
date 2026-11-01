@@ -126,7 +126,7 @@ Every report about a number goes through five layers. The answer counts **truste
 | **L1 Same person** | All reports from one `reporter_id` count as one | Spammer reporting 6 times |
 | **L2 Same network** | Same `ip_prefix` + same number within 24 h = one source | 22 accounts on one Wi-Fi |
 | **L3 Copy-paste** | Nearly identical notes merge into one source; personal stories count more | Friends pasting the same text |
-| **L4 Organised wave** | 3+ people scored on 6 warning signs: a burst inside 2 h, all brand-new accounts, few networks, one area, empty or copied notes, nobody lost money. A high score means new accounts count ×0.2 and it **can't** be Known scam | 40 friends report-bombing |
+| **L4 Organised wave** | 3+ people scored on 6 warning signs: a burst inside 2 h, all brand-new accounts, few networks, one area, empty or copied notes, nobody lost money. A high score means new accounts count ×0.2 and it **can't** be Known scam. **Exception:** if 80%+ of the people wrote their own unique words from their own networks, it's a real wave of independent voices, not an organised one | 40 friends report-bombing |
 | **L5 Reputation** | New reporters count 0.6, people with a track record up to 1.0; anyone who reported a verified business drops to 0.3 | Repeat troublemakers |
 
 **The verdict:**
@@ -137,11 +137,13 @@ Every report about a number goes through five layers. The answer counts **truste
 **Also:**
 - Junk (`12345`, `test`, unknown area, a future date) → **400**, never stored.
 - More than **3 reports an hour** (or 20 a day) from one person → **429**.
-- Fake reports never count towards the map or alerts.
+- Fake reports never count towards the map or alerts, and alerts count **people**, not reports
+  (one person reporting five different numbers is still one person).
 
 **Why a real scam still gets through:** real victims are different people on different networks, in
 different areas, writing in their own words, and some lost money. So the organised-wave score stays low,
-even when a real scam produces a sudden burst of reports.
+even when a real scam produces a sudden burst of reports. And if a real burst hits one neighbourhood
+in one hour, the independent-voices exception (different networks + own words) still lets it through.
 
 ---
 

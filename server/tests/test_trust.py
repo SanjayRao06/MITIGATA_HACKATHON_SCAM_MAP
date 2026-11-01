@@ -148,6 +148,29 @@ def test_fast_real_wave_within_two_hours_still_known_scam():
     assert result["known_scam_allowed"] is True
 
 
+def test_real_wave_in_one_area_within_an_hour_still_known_scam():
+    # [PRD §4] "Caution": a scam call blast can hit ONE neighbourhood in one hour. Everyone is new
+    # and nobody lost money yet, but they are on different networks and wrote their own words,
+    # so this is independent voices, not an organised wave.
+    reports = [rep(f"neighbour{i}", f"net{i}", 1 - i * 0.1, note=OWN_WORDS[i], pin="560102")
+               for i in range(8)]
+    result = judge(reports)
+    assert result["coordination"] >= trust.COORD_THRESHOLD      # the raw score alone would block it
+    assert result["explain"]["independent_voices"] is True
+    assert result["explain"]["coordinated"] is False
+    assert result["known_scam_allowed"] is True
+
+
+def test_bomb_with_a_few_personal_notes_is_still_coordinated():
+    # 40 friends where only some write their own words: not enough independent voices.
+    copy = "This bakery is cheating customers, fake number, do not call or pay them!!"
+    reports = [rep(f"friend{i}", f"home{i}", 2 - i * 0.04,
+                   note=OWN_WORDS[i % 8] if i % 4 == 0 else copy, pin="560038") for i in range(40)]
+    result = judge(reports)
+    assert result["explain"]["independent_voices"] is False
+    assert result["known_scam_allowed"] is False
+
+
 def test_colleagues_on_one_office_wifi_plus_others_still_known_scam():
     # Two colleagues share the office network (merged into one source), plus 3 people elsewhere.
     reports = [rep("colleague1", "office", 5, note=OWN_WORDS[0]),

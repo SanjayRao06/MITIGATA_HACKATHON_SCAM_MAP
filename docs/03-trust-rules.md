@@ -43,6 +43,9 @@ Compute over reports in the last 48h. Signals (each 0..1), averaged:
 - `low_text_diversity`: share of empty or near-duplicate notes
 - `no_loss`: share with amount_lost_inr == 0 and has_screenshot == false
 If coordination ≥ 0.6 → multiply every new-reporter cluster's weight by 0.2.
+**Exception (independent voices):** if ≥ 80% of people wrote a personal, non-copied note AND
+≥ 80% came from distinct ip_prefixes, the wave is NOT coordinated ([PRD §4]: real reports are
+"many different, unrelated people writing in their own words"), even if it is a burst in one area.
 (Real campaigns score low because net/area/text diversity is high.)
 ### L5 Reporter reputation (stored per hashed reporter_id)
 - New reporter base weight 0.6; established (≥2 earlier reports on identifiers that became
