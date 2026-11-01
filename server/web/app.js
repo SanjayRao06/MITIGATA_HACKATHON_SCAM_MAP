@@ -454,6 +454,8 @@ const OTHER_CHANNEL = "Something else";
 /* Short keys for the channel names, used to word step 3 ("q_what_call" = "Their phone number"). */
 const CHANNEL_KEY = { "Phone call": "call", "SMS or WhatsApp": "sms", "QR code": "qr",
   "Fake website": "web", "UPI request": "upi", "Something else": "other" };
+/* Pictures for the "when" chips, so they can be told apart without reading. */
+const WHEN_ICONS = { now: "zap", today: "sun", yesterday: "moon", pick: "calendar" };
 const EVIDENCE_KINDS = [["screenshot", "camera"], ["screen_rec", "smartphone"], ["call_rec", "headset"]];
 
 async function pageReport(params) {
@@ -475,7 +477,7 @@ async function pageReport(params) {
       <h1>${t("report_title")}</h1>
       <p class="note">${icon("lock")}<span>${t("report_sub")}</span></p>
       <form id="rform" novalidate>
-        <div class="step"><div class="step-title"><span class="step-num">1</span><h2>${t("q_channel")}</h2></div>
+        <div class="step"><div class="step-title"><span class="step-num">1</span><span class="step-ico">${icon("message")}</span><h2>${t("q_channel")}</h2></div>
           <div class="tiles" id="rchan" role="radiogroup" aria-label="${t("q_channel")}">
             ${(meta?.channels || Object.keys(CHANNEL_ICONS)).map((c) => `
               <button type="button" role="radio" class="tile ${c === form.channel ? "on" : ""}" data-v="${esc(c)}" aria-checked="${c === form.channel}">
@@ -483,22 +485,23 @@ async function pageReport(params) {
           </div>
           <input class="input" id="rchanother" maxlength="60" placeholder="${t("channel_other_ph")}" aria-label="${t("channel_other_ph")}" style="margin-top:8px" hidden></div>
 
-        <div class="step"><div class="step-title"><span class="step-num">2</span><h2>${t("q_when")}</h2></div>
+        <div class="step"><div class="step-title"><span class="step-num">2</span><span class="step-ico">${icon("clock")}</span><h2>${t("q_when")}</h2></div>
           <div class="chips" id="rwhen">${[...Object.keys(whenHours), "pick"].map((k) => `
-            <button type="button" class="chip ${k === form.when ? "on" : ""}" data-v="${k}">${k === "pick" ? icon("clock") : ""}${t("when_" + k)}</button>`).join("")}</div>
+            <button type="button" class="chip ${k === form.when ? "on" : ""}" data-v="${k}">${icon(WHEN_ICONS[k])}${t("when_" + k)}</button>`).join("")}</div>
           <input class="input" type="datetime-local" id="rwhenat" style="margin-top:8px" hidden
             max="${localInputValue(now)}" min="${localInputValue(new Date(now - 365 * 864e5))}" value="${localInputValue(now)}" aria-label="${t("when_pick")}">
           <div id="rwhenerr"></div></div>
 
-        <div class="step"><div class="step-title"><span class="step-num">3</span><h2 id="rwhat"></h2></div>
+        <div class="step"><div class="step-title"><span class="step-num">3</span><span class="step-ico">${icon("clipboard")}</span><h2 id="rwhat"></h2></div>
           <p class="hint"><span id="rtypenow"></span> · <button type="button" class="linkbtn" id="rtypechange">${t("change")}</button></p>
           <div style="margin-top:8px" id="rtypewrap" hidden>${typeTabs("rtype", startType)}</div>
           <div class="field" style="margin-top:10px">${icon("copy")}
-            <input id="rval" autocomplete="off" aria-labelledby="rwhat" value="${esc(params.value || "")}"></div>
+            <input id="rval" autocomplete="off" aria-labelledby="rwhat" value="${esc(params.value || "")}">
+            <button type="button" class="paste-btn" id="rpaste" aria-label="${t("paste")}" hidden>${icon("clipboard")}<span>${t("paste")}</span></button></div>
           <p class="hint" id="rtypehint"></p>
           <div id="rvalerr"></div></div>
 
-        <div class="step"><div class="step-title"><span class="step-num">4</span><h2>${t("q_area")}</h2></div>
+        <div class="step"><div class="step-title"><span class="step-num">4</span><span class="step-ico">${icon("mapPin")}</span><h2>${t("q_area")}</h2></div>
           <p class="hint">${t("q_area_sub")}</p>
           <div class="combo" style="margin-top:8px">
             <div class="field">${icon("search")}<input id="rarea" autocomplete="off" placeholder="${t("area_placeholder")}"
@@ -539,6 +542,16 @@ async function pageReport(params) {
     $("#rtypenow").textContent = t("type_is", { type: t("type_" + type) });
   });
   if (params.value || params.type) picked.touched = true;
+  // Paste button: only shown where the browser lets a page read the clipboard (needs https).
+  if (navigator.clipboard?.readText) {
+    $("#rpaste").hidden = false;
+    $("#rpaste").addEventListener("click", async () => {
+      try {
+        const text = (await navigator.clipboard.readText()).trim();
+        if (text) { val.value = text.slice(0, 300); val.dispatchEvent(new Event("input", { bubbles: true })); }
+      } catch { val.focus(); }      // permission refused: just put the cursor in the box
+    });
+  }
   $("#rtypechange").addEventListener("click", () => { $("#rtypewrap").hidden = !$("#rtypewrap").hidden; });
   const setWhatTitle = () => { $("#rwhat").textContent = t("q_what_" + (CHANNEL_KEY[form.channel] || "other")); };
   setWhatTitle();

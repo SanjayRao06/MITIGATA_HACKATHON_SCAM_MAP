@@ -171,6 +171,13 @@ a.chip { text-decoration: none; }
 .step-title { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .step-num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sage); color: #fff; font-weight: 700; font-size: 14px; }
 .step-title h2 { margin: 0; font-size: 19px; }
+/* Picture next to each step number, so the form can be followed from icons alone ([PRD §8] row 6). */
+.step-ico { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--sage-tint); color: var(--sage); flex: none; }
+.step-ico .ico { width: 18px; height: 18px; }
+/* One-tap "Paste" inside the number/link box. */
+.paste-btn { display: inline-flex; align-items: center; gap: 4px; flex: none; min-height: 36px; padding: 0 10px; margin-left: 6px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--sage-tint); color: var(--sage); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.paste-btn .ico { width: 16px; height: 16px; color: inherit; }
 .step > .hint:first-of-type { margin-top: 0; }
 details.more { margin-top: 22px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
 details.more summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
