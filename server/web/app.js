@@ -490,6 +490,24 @@ function whyPanel(r) {
     </details>`;
 }
 
+/**
+ * The WhatsApp warning text for a lookup result ("Share on WhatsApp"), in the current language.
+ * Privacy (docs/04): it shares only what's already on screen. A number with fewer than 3
+ * independent reporters stays masked (98XXXXX210) and the link then opens the plain Check page,
+ * so the full number never travels in the message. Careful wording: "reported", never "scammer".
+ * In: the /lookup reply, the identifier type, the card's sub-line (business name for verified).
+ */
+function shareMessage(r, idType, sub) {
+  const value = r.display_value;
+  const link = r.masked ? `${location.origin}/#/check`
+    : `${location.origin}/#/check?value=${encodeURIComponent(value)}&type=${idType}`;
+  const vars = { value, link, n: fmtNum(r.distinct_reporters || 0), business: sub || t("v_verified") };
+  if (r.verdict === "VERIFIED_BUSINESS") return t("share_verified", vars);
+  const main = r.verdict === "NO_REPORTS" ? "share_none"
+    : r.challenged ? "share_review" : r.verdict === "KNOWN_SCAM" ? "share_known" : "share_susp";
+  return `${t(main, vars)}\n\n${t("share_tail")}`;
+}
+
 /** The coloured result card for one /lookup reply. */
 function resultCard(r, typed, idType) {
   const cls = { KNOWN_SCAM: "known", SUSPICIOUS: "susp", NO_REPORTS: "none", VERIFIED_BUSINESS: "verified" }[r.verdict];
@@ -545,6 +563,9 @@ function resultCard(r, typed, idType) {
     .map((s) => s.replace(/[.!?।]?$/, (m) => m || (S.lang === "hi" ? "।" : "."))).join(" ");
   const speakBtn = CAN_SPEAK ? `
         <button type="button" class="btn btn-quiet btn-sm speak-btn" data-speak="${esc(spoken)}">${icon("volume")} ${t("speak_btn")}</button>` : "";
+  const shareBtn = `
+        <a class="btn btn-sm share-btn" target="_blank" rel="noopener"
+           href="https://wa.me/?text=${encodeURIComponent(shareMessage(r, idType, sub))}">${icon("message")} ${t("share_btn")}</a>`;
 
   return `
     <div class="result ${cls}">
@@ -559,7 +580,7 @@ function resultCard(r, typed, idType) {
         <div class="btn-row">
           ${r.verdict === "VERIFIED_BUSINESS" ? "" : `<a class="btn btn-quiet btn-sm" href="#/report?value=${encodeURIComponent(typed)}&type=${idType}">${icon("flag")} ${t("report_this")}</a>`}
           <a class="btn btn-danger btn-sm" href="tel:1930">${icon("phone")} ${t("call_1930")}</a>
-        </div>
+        </div>${shareBtn}
         ${r.report_count && !r.challenged && r.verdict !== "VERIFIED_BUSINESS" ? `
           <a class="dispute-link" href="#/dispute?value=${encodeURIComponent(typed)}&type=${idType}">${icon("scale")} ${t("dispute_cta")}</a>` : ""}
       </div>
