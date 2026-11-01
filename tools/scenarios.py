@@ -543,6 +543,8 @@ def scenario_other_cities(run: Run) -> None:
     """
     name = "other cities"
     for pin, (city, types) in OTHER_CITY_MIX.items():
+        # Every area we know in this city (the brief's one + our extra localities), so the map shows several points.
+        pins = [p for p, a in run.areas.items() if a["city"] == city]
         for k, scam_type in enumerate(types):
             # 1) A wave: 4-6 people on one number (UPI ID for UPI scams), spread over ~2 weeks.
             id_type = "upi" if scam_type == "upi-refund-qr" else "phone"
@@ -550,7 +552,7 @@ def scenario_other_cities(run: Run) -> None:
             people = run.rng.randint(4, 6)     # 4+: still Known scam if two notes happen to look alike
             start = run.rng.uniform(2, 110)                          # hours ago of the newest report
             for i in range(people):
-                run.send(run.report(id_type, value, start + i * run.rng.uniform(6, 30), pin,
+                run.send(run.report(id_type, value, start + i * run.rng.uniform(6, 30), run.rng.choice(pins),
                                     run.person(), run.network(), channel=TYPE_CHANNEL[scam_type],
                                     scam_type=scam_type, note=run.real_note(scam_type),
                                     has_screenshot=run.rng.random() < 0.4,
@@ -560,7 +562,7 @@ def scenario_other_cities(run: Run) -> None:
         # 2) A few one-off reports on different numbers (each only one person: masked, Suspicious).
         for _ in range(run.rng.randint(4, 8)):
             scam_type = run.rng.choice(types)
-            run.send(run.report("phone", run.phone(), run.rng.uniform(1, 230), pin, run.person(), run.network(),
+            run.send(run.report("phone", run.phone(), run.rng.uniform(1, 230), run.rng.choice(pins), run.person(), run.network(),
                                 channel=TYPE_CHANNEL[scam_type], scam_type=scam_type,
                                 note=run.real_note(scam_type)))
 

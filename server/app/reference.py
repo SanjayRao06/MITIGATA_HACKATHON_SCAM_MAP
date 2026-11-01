@@ -1,6 +1,7 @@
 """Reference data from the brief's appendix, loaded once from `app/data/*.json`.
 
-- areas.json: the 25 pincodes we accept, with locality, city and a centre lat/lng for the map.
+- areas.json: the pincodes we accept, with locality, city and a centre lat/lng for the map: the brief's
+  25 areas first (unchanged), then 3 more localities in each of the 10 non-Bengaluru cities for the demo.
 - verified.json: known-good business/helpline identifiers. This is the ONLY identifier list
   allowed in our code (CLAUDE.md hard rule 2) - lookups of these say VERIFIED_BUSINESS.
 - scam_types.json: allowed channels and scam types. Unknown values are not rejected;

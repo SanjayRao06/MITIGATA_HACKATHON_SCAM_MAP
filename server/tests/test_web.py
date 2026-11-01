@@ -63,7 +63,7 @@ def test_every_english_key_has_hindi():
 # ---------------------------------------------------------------- /meta and /stats
 def test_meta_lists_areas_types_channels():
     m = client.get("/meta").json()
-    assert len(m["areas"]) == 25 and "digital-arrest" in m["scam_types"]
+    assert len(m["areas"]) == 55 and "digital-arrest" in m["scam_types"]
     assert "Phone call" in m["channels"] and m["cities"][0] == "Bengaluru"
 
 

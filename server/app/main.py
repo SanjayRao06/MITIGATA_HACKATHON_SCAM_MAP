@@ -253,7 +253,7 @@ async def post_challenge(body: dict = Body(..., openapi_examples={
 
 @app.get("/meta")
 def get_meta():
-    """Reference data for the website: the 25 areas (with map points), scam types and channels.
+    """Reference data for the website: the areas (with map points), scam types and channels.
 
     Comes straight from data/*.json, so the app and the server always agree on the lists.
     """
