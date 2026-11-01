@@ -185,6 +185,11 @@ details.more summary::-webkit-details-marker { display: none; }
 details.more summary .ico:last-child { margin-left: auto; transition: transform .2s; }
 details.more[open] summary .ico:last-child { transform: rotate(180deg); }
 details.more .more-body { padding: 0 16px 16px; }
+/* "Why this result?" panel on the Check result */
+details.more.why { margin-top: 14px; }
+.why-list { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 8px; line-height: 1.45; }
+.why-list li::marker { color: var(--sage); font-weight: 600; }
+.why-list li.why-rule::marker { color: var(--gold, #C9A227); }
 .toggle { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); cursor: pointer; }
 .toggle input { width: 22px; height: 22px; accent-color: var(--sage); }
 .combo { position: relative; }

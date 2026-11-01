@@ -381,6 +381,29 @@ function myArea() {
   return (pin && S.meta?.areas.find((a) => a.pincode === pin)) || null;
 }
 
+/**
+ * "Why this result?": a fold-out list explaining the verdict in plain words (EN/HI).
+ * In: the /lookup reply; its `why` list holds reason codes + counts (no ids, no notes) made by the
+ * server's trust rules. Each code has a "why_<code>" text in i18n.js. Unknown codes are skipped,
+ * so an older or newer server never breaks the page. Closed by default to keep the card short.
+ */
+function whyPanel(r) {
+  const items = (r.why || []).filter((w) => STRINGS.en["why_" + w.code]);
+  if (!items.length) return "";
+  const num = (w) => Object.fromEntries(Object.entries(w).map(([k, v]) => [k, typeof v === "number" ? fmtNum(v) : v]));
+  const okCodes = ["verified_list", "bar_met", "independent", "received", "no_reports"];
+  return `
+    <details class="more why">
+      <summary>${icon("info")}<div><b>${t("why_title")}</b><br><span class="muted small">${t("why_sub")}</span></div>${icon("chevronDown")}</summary>
+      <div class="more-body">
+        <ol class="why-list">${items.map((w) => `
+          <li class="${okCodes.includes(w.code) ? "" : "why-rule"}">${esc(t("why_" + w.code, num(w)))}</li>`).join("")}
+        </ol>
+        <p class="note">${icon("eyeOff")}<span>${t("why_privacy")}</span></p>
+      </div>
+    </details>`;
+}
+
 /** The coloured result card for one /lookup reply. */
 function resultCard(r, typed, idType) {
   const cls = { KNOWN_SCAM: "known", SUSPICIOUS: "susp", NO_REPORTS: "none", VERIFIED_BUSINESS: "verified" }[r.verdict];
@@ -435,7 +458,7 @@ function resultCard(r, typed, idType) {
         ${r.challenged ? `<div class="underreview">${icon("scale")} ${t("v_challenged")}</div>` : ""}
         <div class="value-box"><small>${t("r_value_" + idType)}</small><b>${esc(r.display_value)}</b>
           ${r.masked ? `<span class="small muted">${t(r.challenged ? "r_hidden_review" : "r_hidden")}</span>` : ""}</div>
-        ${facts}${advice}
+        ${facts}${advice}${whyPanel(r)}
         <div class="btn-row">
           ${r.verdict === "VERIFIED_BUSINESS" ? "" : `<a class="btn btn-quiet btn-sm" href="#/report?value=${encodeURIComponent(typed)}&type=${idType}">${icon("flag")} ${t("report_this")}</a>`}
           <a class="btn btn-danger btn-sm" href="tel:1930">${icon("phone")} ${t("call_1930")}</a>

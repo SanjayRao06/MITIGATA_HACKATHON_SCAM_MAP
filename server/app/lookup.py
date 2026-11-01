@@ -35,6 +35,56 @@ def message_for(verdict: str, people: int, belongs_to: str | None, challenged: b
     return "Some reports, not confirmed" if people > 1 else "Reported, not confirmed"
 
 
+def reasons_for(verdict: str, report_count: int, result: dict, challenged: bool) -> list[dict]:
+    """"Why this result?": the trust rules' working as short reason codes the website translates.
+
+    In: the verdict, number of stored reports, the trust-rule result (trust.assess) and the dispute flag.
+    Out: a list like [{"code": "same_network", "n": 21}, ...], in reading order.
+    Privacy (docs/04): counts only. No ids, hashes, notes, networks or times, so nothing in it can
+    point to a reporter. It shows the same thinking as the README's attack table, live, per number.
+    """
+    ex = result.get("explain", {})
+
+    # 1) Verified list and "no reports" are simple: one reason each.
+    if verdict == "VERIFIED_BUSINESS":
+        why = [{"code": "verified_list"}]
+        if report_count:
+            why.append({"code": "verified_reports_ignored", "n": report_count})
+        return why
+    if verdict == "NO_REPORTS":
+        return [{"code": "no_reports"}]
+
+    # 2) What came in, and what each trust rule merged or discounted.
+    people = ex.get("people (distinct reporter ids)", 0)
+    why = [{"code": "received", "reports": report_count, "people": people}]
+    if report_count > people:
+        why.append({"code": "same_person", "n": report_count - people})
+    if ex.get("merged_by_same_network"):
+        why.append({"code": "same_network", "n": ex["merged_by_same_network"]})
+    if ex.get("merged_by_copy_paste_notes"):
+        why.append({"code": "copy_paste", "n": ex["merged_by_copy_paste_notes"]})
+    if ex.get("coordinated"):
+        why.append({"code": "coordinated"})
+    low = ex.get("independent_sources", 0) - result.get("trusted_sources", 0)
+    if low > 0 and not ex.get("coordinated"):
+        why.append({"code": "low_weight", "n": low})
+
+    # 3) What's left after the rules, and whether that clears the bar for "Known scam".
+    if result.get("trusted_sources", 0):
+        why.append({"code": "independent", "people": result["trusted_sources"],
+                    "networks": result.get("distinct_networks", 0)})
+    else:   # the card still says "1 person" (never 0 when there are reports), so don't print "0 people"
+        why.append({"code": "independent_none"})
+    need = {"need_people": trust.KNOWN_SCAM_MIN_SOURCES, "need_networks": trust.KNOWN_SCAM_MIN_NETWORKS}
+    if challenged:
+        why.append({"code": "challenged"})
+    elif verdict == "KNOWN_SCAM":
+        why.append({"code": "bar_met", **need})
+    else:
+        why.append({"code": "bar_not_met", **need})
+    return why
+
+
 def _find(conn, id_type: str, value: str):
     """The identifiers row for (type, value), or None if nobody reported it."""
     return conn.execute(select(identifiers).where(
@@ -96,6 +146,7 @@ def lookup(id_type: str, value: str) -> dict:
         # extra fields (allowed by the PRD): friendly text for the app
         "message": message_for(verdict, people, verified["belongs_to"] if verified else None, challenged),
         "masked": not show_full,
+        "why": reasons_for(verdict, len(rows), result, challenged),   # "Why this result?" panel
     }
 
 
