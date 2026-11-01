@@ -39,6 +39,18 @@ def test_static_files_are_served(name):
     assert client.get(f"/static/{name}").status_code == 200
 
 
+def test_website_files_tell_browsers_to_check_for_updates():
+    """After a deploy, phones must fetch the new app.js instead of an old saved copy."""
+    for path in ["/", "/static/app.js", "/static/i18n.js"]:
+        assert client.get(path).headers.get("cache-control") == "no-cache", path
+    # Unchanged files still come back as a tiny 304, so the site stays fast.
+    first = client.get("/static/app.js")
+    again = client.get("/static/app.js", headers={"if-none-match": first.headers["etag"]})
+    assert again.status_code == 304
+    # API replies are untouched.
+    assert "cache-control" not in client.get("/health").headers
+
+
 def test_api_paths_still_win_over_the_website():
     assert client.get("/map").json().keys() == {"clusters"}
     assert client.get("/health").json() == {"ok": True}

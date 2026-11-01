@@ -80,6 +80,24 @@ app.middleware("http")(safe_logging_middleware)
 app.include_router(licence.router)
 
 
+async def website_always_fresh(request, call_next):
+    """Make browsers check for a newer website after every deploy.
+
+    Without this, a phone can keep using yesterday's app.js for hours (no Cache-Control header
+    means the browser guesses), so a judge might not see the latest fixes. "no-cache" doesn't mean
+    "don't store": the browser keeps its copy and asks "changed?"; unchanged files get a tiny
+    304 reply, so pages still load fast. Only the website ("/" and "/static/...") is affected.
+    """
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+app.middleware("http")(website_always_fresh)
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_error_to_400(_request: Request, _exc: RequestValidationError):
     """FastAPI's default for bad input is 422, but the PRD wants 400 {"error": ...}."""
