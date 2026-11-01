@@ -1,4 +1,4 @@
-"""Make a signed licence file ([PRD §6] step 2), using the private key from tools/keygen.py.
+"""Make a signed licence file, using the private key from tools/keygen.py.
 
 The licence says who may use the server and until when. Its signature covers every field, so
 editing the date (or anything else) makes the server reject it.

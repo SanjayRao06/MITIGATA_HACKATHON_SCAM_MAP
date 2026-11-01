@@ -3,7 +3,7 @@
 validate_report() turns the raw JSON into a clean dict or raises ReportError (-> HTTP 400).
 save_report() applies the rate limit (429), stores it, re-runs the trust rules for that
 identifier, and returns the reply {report_id, case_id, merged}.
-Rules come from [PRD §A.2] and docs/02 ("Other validation").
+Rules follow the POST /reports spec.
 """
 
 import uuid
@@ -38,7 +38,7 @@ def validate_report(body) -> dict:
 
     In: the parsed JSON body (should be a dict).
     Out: dict with normalized identifier, UTC times, hashed reporter/IP, canonical channel etc.
-    Raises ReportError for anything [PRD §A.2] says is a 400: bad identifier, unknown area code,
+    Raises ReportError for anything that must be a 400: bad identifier, unknown area code,
     bad time. Unknown channel / scam_type are NOT errors; they become "Something else" / "other".
     """
     # 1) The body must be a JSON object.
@@ -83,7 +83,7 @@ def validate_report(body) -> dict:
         if reported > now + FUTURE_TOLERANCE:
             raise ReportError("reported_at is in the future")
 
-    # 5) Reporter identity comes from the body ([PRD §A.0] rule 2), and we keep only hashes.
+    # 5) Reporter identity comes from the body, and we keep only hashes.
     reporter_id, ip_prefix = body.get("reporter_id"), body.get("ip_prefix")
     if not isinstance(reporter_id, str) or not reporter_id.strip():
         raise ReportError("reporter_id is required")
@@ -146,7 +146,7 @@ def _get_or_create_identifier(conn, id_type: str, value: str) -> int:
 
 
 class RateLimited(Exception):
-    """This reporter sent too many reports in a short time. The API answers 429 ([PRD §A.0] rule 4)."""
+    """This reporter sent too many reports in a short time. The API answers 429."""
 
 
 def _check_rate_limit(conn, clean: dict) -> None:

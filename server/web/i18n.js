@@ -1,7 +1,7 @@
 /*
   Every piece of text on the site, in English (en) and Hindi (hi).
-  Rule ([PRD §5] rule 3): say "reported" and never use accusing words about a number or person
-  (the banned list is in docs/04 and checked by tests/test_web.py, in English and Hindi).
+  Rule: say "reported" and never use accusing words about a number or person
+  (the banned list is checked by tests/test_web.py, in English and Hindi).
   t("key", {n: 3}) returns the text in the current language, filling {n}.
   Scam-type and channel keys are the exact values the API uses.
 */
@@ -127,7 +127,7 @@ const STRINGS = {
     err_upi: "This doesn't look like a valid UPI ID (like name@okaxis).",
     err_url: "This doesn't look like a valid link (like sbi-kyc.in/pay).",
     err_sender_id: "This doesn't look like a valid SMS sender (like VM-HDFCBK).",
-    // the four results ([PRD §3] feature 2)
+    // the four results
     verdict_KNOWN_SCAM: "Known scam", verdict_SUSPICIOUS: "Suspicious",
     verdict_NO_REPORTS: "No reports", verdict_VERIFIED_BUSINESS: "Verified business",
     v_by_one: "Reported by 1 person", v_by_many: "Reported by {n} people",
@@ -359,7 +359,7 @@ const STRINGS = {
   },
 };
 
-/* Scam types: name, how it works, what to do. Keys are the exact API values ([PRD §C]). */
+/* Scam types: name, how it works, what to do. Keys are the exact API values. */
 const SCAM_INFO = {
   en: {
     "digital-arrest": ["Digital arrest", "Fake police or CBI on a video call say you're under arrest and must pay.", "Police never arrest anyone on a video call. Hang up and call 1930."],

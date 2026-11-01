@@ -1,11 +1,11 @@
 """The FastAPI app: this is where every route is wired up.
 
 Run it with `uvicorn app.main:app --reload --no-access-log` from the `server/` folder.
-Endpoints so far (contract in docs/01, source of truth [PRD §A]):
+Endpoints:
   GET /health, POST /reports, GET /lookup, GET /map, GET /alerts, POST /challenges, POST /admin/reset
   GET /meta, GET /stats (for the website), GET /debug/explain (only when EXPLAIN_ENABLED=1)
   The website itself (web/) is served at "/" and its files under "/static/".
-Still to come: /license (P2, see PROGRESS.md).
+  GET /license, POST /license (licence status and upload)
 """
 
 import asyncio
@@ -21,7 +21,7 @@ from pathlib import Path
 from sqlalchemy import delete
 
 from app import db, reference, speech
-from app import license as licence  # P2 licence: middleware + GET/POST /license
+from app import license as licence  # licence middleware + GET/POST /license
 from app.alerts import build_alerts
 from app.assessment import refresh_all_trusted_flags
 from app.challenges import ChallengeError, save_challenge, validate_challenge
@@ -101,12 +101,12 @@ app.include_router(speech.router)   # GET /speak: Hindi/English audio for "Read 
 
 @app.exception_handler(RequestValidationError)
 async def validation_error_to_400(_request: Request, _exc: RequestValidationError):
-    """FastAPI's default for bad input is 422, but the PRD wants 400 {"error": ...}."""
+    """FastAPI's default for bad input is 422, but the API spec wants 400 {"error": ...}."""
     return JSONResponse(status_code=400, content={"error": "invalid request"})
 
 
 def bad_request(message: str) -> JSONResponse:
-    """Shortcut for a 400 reply in the PRD's shape."""
+    """Shortcut for a 400 reply in the API spec's shape."""
     return JSONResponse(status_code=400, content={"error": message})
 
 
@@ -115,12 +115,12 @@ def health() -> dict:
     """Alive check for judges, uptime monitors and the deploy platform.
 
     In: nothing. Out: `{"ok": true}` with status 200.
-    Why: docs/01 says it must always work, even when the licence has expired.
+    Why: it must always work, even when the licence has expired.
     """
     return {"ok": True}
 
 
-# Example shown (and editable) in the /docs page, copied from [PRD §A.2].
+# Example shown (and editable) in the /docs page, copied from the API spec.
 REPORT_EXAMPLE = {
     "report_id": "rep_000123",
     "occurred_at": "2026-10-31T14:00:00+05:30",
@@ -143,7 +143,7 @@ REPORT_EXAMPLE = {
 # The website can't know the user's network, so it sends ip_prefix "web" and the server fills
 # in the first 3 parts of the caller's IP (e.g. "49.36.12"). It is hashed straight away in
 # validate_report() and never stored or logged in readable form. The judges' test tool sends its
-# own ip_prefix, which is always used as-is ([PRD §A.0] rule 2).
+# own ip_prefix, which is always used as-is.
 WEB_IP_MARKER = "web"
 
 
@@ -164,7 +164,7 @@ def caller_ip_prefix(request: Request) -> str:
 @app.post("/reports", status_code=201)
 async def post_report(request: Request, body: dict = Body(..., openapi_examples={
         "report": {"summary": "A phone scam report", "value": REPORT_EXAMPLE}})):
-    """Receive one scam report ([PRD §A.2]).
+    """Receive one scam report.
 
     In: report JSON. Out: 201 {report_id, case_id, merged}, or 400 {"error"} for junk.
     `body: dict` tells FastAPI (and the /docs page) to expect a JSON object. Broken JSON or a
@@ -181,7 +181,7 @@ async def post_report(request: Request, body: dict = Body(..., openapi_examples=
         return bad_request(str(exc))
 
     # 3) Save it. The database work runs in a worker thread so the server stays responsive.
-    #    Too many reports from one reporter in a short time -> 429 (allowed, [PRD §A.0] rule 4).
+    #    Too many reports from one reporter in a short time -> 429 (allowed).
     try:
         return await run_in_threadpool(save_report, clean)
     except RateLimited:
@@ -189,8 +189,8 @@ async def post_report(request: Request, body: dict = Body(..., openapi_examples=
 
 
 @app.get("/lookup")
-def get_lookup(type: str | None = None, value: str | None = None):  # noqa: A002 - name from the PRD
-    """Check an identifier ([PRD §A.3]), e.g. /lookup?type=phone&value=%2B91%2098765%2043210.
+def get_lookup(type: str | None = None, value: str | None = None):  # noqa: A002 - name from the API spec
+    """Check an identifier, e.g. /lookup?type=phone&value=%2B91%2098765%2043210.
 
     Out: 200 with a verdict (never 404, even for unknown numbers), or 400 for impossible values.
     """
@@ -213,7 +213,7 @@ def get_lookup(type: str | None = None, value: str | None = None):  # noqa: A002
 
 @app.get("/map")
 def get_map(pincode: str | None = None, days: str | None = None, radius_km: str | None = None):
-    """Scam reports by area for the last N days ([PRD §A.4]).
+    """Scam reports by area for the last N days.
 
     Example: /map?pincode=560102&days=7&radius_km=2 (days defaults to 7, radius_km to 2).
     Out: {"clusters": [...]}, one per area within the radius that has trusted reports in the window.
@@ -236,7 +236,7 @@ def get_map(pincode: str | None = None, days: str | None = None, radius_km: str 
 
 @app.get("/alerts")
 def get_alerts(pincode: str | None = None):
-    """Alerts for an area ([PRD §A.5]): SPIKE and NEW_TYPE, or {"alerts": []} when all is normal.
+    """Alerts for an area: SPIKE and NEW_TYPE, or {"alerts": []} when all is normal.
 
     Without a pincode it returns alerts for every area (for the app's banner).
     """
@@ -245,7 +245,7 @@ def get_alerts(pincode: str | None = None):
     return {"alerts": build_alerts(pincode.strip() if pincode else None)}
 
 
-# Example shown (and editable) in the /docs page, copied from [PRD §A.7].
+# Example shown (and editable) in the /docs page, copied from the API spec.
 CHALLENGE_EXAMPLE = {
     "identifier_type": "phone",
     "identifier_value": "+91 80 4100 2233",
@@ -258,7 +258,7 @@ CHALLENGE_EXAMPLE = {
 @app.post("/challenges", status_code=201)
 async def post_challenge(body: dict = Body(..., openapi_examples={
         "challenge": {"summary": "A bakery disputes its number", "value": CHALLENGE_EXAMPLE}})):
-    """A business disputes a number ([PRD §A.7], bonus).
+    """A business disputes a number (bonus).
 
     Out: 201 {challenge_id, status: "under_review"}, or 400 {"error"}. Afterwards /lookup shows
     challenged=true and never KNOWN_SCAM for that number. Claimant details are never returned.
@@ -317,7 +317,7 @@ def debug_explain(type: str | None = None, value: str | None = None):  # noqa: A
 
 @app.post("/admin/reset")
 def admin_reset():
-    """Delete all reports so the judges can start clean ([PRD §A.6]).
+    """Delete all reports so the judges can start clean.
 
     Also clears identifiers, reporter reputation and challenges, which are all derived from
     reports. Keeps the licence and clock guard (the licence demo must survive a reset).
@@ -334,7 +334,7 @@ def _openapi_with_real_status_codes():
     """Build the /docs description with the status codes we really send.
 
     FastAPI auto-lists "422 Validation Error" for every endpoint that takes input, but our
-    validation_error_to_400 handler means we never send 422 - the PRD wants 400 {"error": ...}.
+    validation_error_to_400 handler means we never send 422 - the API spec wants 400 {"error": ...}.
     So we swap every 422 entry for a 400 one, so the docs page doesn't mislead anyone (judges included).
     """
     if app.openapi_schema:
@@ -350,7 +350,7 @@ def _openapi_with_real_status_codes():
             responses = op.get("responses", {})
             if responses.pop("422", None) is not None:
                 responses["400"] = error_400
-    # POST /reports can also answer 429 when one reporter sends too many ([PRD §A.0] rule 4).
+    # POST /reports can also answer 429 when one reporter sends too many.
     reports_op = schema.get("paths", {}).get("/reports", {}).get("post")
     if reports_op:
         reports_op["responses"]["429"] = {

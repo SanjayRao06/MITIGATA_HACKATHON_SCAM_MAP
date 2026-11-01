@@ -2,14 +2,14 @@
 
 "+91 98765 43210", "09876543210" and "98765-43210" are the same phone, so they must become
 the same key ("+919876543210") or our report counts would be split. These are pure functions
-(no database, no network), so they are easy to test. Rules come from docs/02-normalization.md.
+(no database, no network), so they are easy to test.
 Anything we can't make sense of raises `InvalidIdentifier`, which the API turns into a 400.
 """
 
 import re
 from urllib.parse import urlsplit
 
-# The four identifier types the API accepts (docs/01).
+# The four identifier types the API accepts.
 IDENTIFIER_TYPES = ("phone", "upi", "url", "sender_id")
 
 
@@ -92,7 +92,7 @@ def normalize_phone(raw: str) -> str:
 def _is_junk_digits(digits: str) -> bool:
     """True if the digits are one repeated digit ("9999999999") or a rising run ("1234", "2345678901").
 
-    Falling runs ("9876543210") are NOT junk: docs/02 uses one as a real example.
+    Falling runs ("9876543210") are NOT junk: real numbers can look like that.
     """
     if len(set(digits)) == 1:
         return True

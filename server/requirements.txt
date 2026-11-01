@@ -1,4 +1,4 @@
-# Server dependencies (see CLAUDE.md "Stack").
+# Server dependencies.
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30
 sqlalchemy>=2.0,<3.0

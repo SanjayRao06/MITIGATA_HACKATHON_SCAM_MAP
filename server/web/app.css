@@ -1,6 +1,5 @@
 /*
-  Scam Map styles. Palette "Sage & Cream", style "clean civic" (see docs/11-stitch-prompts.md).
-  Layouts come from the Google Stitch designs; colours are OUR palette (Stitch had drifted to mint).
+  Scam Map styles. Palette "Sage & Cream", style "clean civic".
   Phone first; from 900px wide the site switches to a laptop layout (top nav, two columns).
   No gradients, no glassy effects: flat cream surfaces, 1px warm borders, 12px corners.
 */
@@ -171,7 +170,7 @@ a.chip { text-decoration: none; }
 .step-title { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .step-num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sage); color: #fff; font-weight: 700; font-size: 14px; }
 .step-title h2 { margin: 0; font-size: 19px; }
-/* Picture next to each step number, so the form can be followed from icons alone ([PRD §8] row 6). */
+/* Picture next to each step number, so the form can be followed from icons alone. */
 .step-ico { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--sage-tint); color: var(--sage); flex: none; }
 .step-ico .ico { width: 18px; height: 18px; }
 /* One-tap "Paste" inside the number/link box. */

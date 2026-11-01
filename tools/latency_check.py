@@ -1,4 +1,4 @@
-"""Read-only speed check for GET /lookup (PROGRESS 5.5, [PRD §8] row 2: answers in under 500 ms).
+"""Read-only speed check for GET /lookup (target: answers in under 500 ms).
 
 It sends N lookups (default 200) and prints how long they took: median, p95 and slowest.
 It only READS: no reports are sent, nothing is reset or deleted, so it is safe to run against

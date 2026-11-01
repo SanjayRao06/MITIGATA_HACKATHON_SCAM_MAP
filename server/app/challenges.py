@@ -1,4 +1,4 @@
-"""POST /challenges logic: a business disputes a number ([PRD §A.7], bonus feature).
+"""POST /challenges logic: a business disputes a number (bonus feature).
 
 Example: Fresh Bakes says "+91 80 4100 2233 is our real shop number". After a dispute, /lookup
 shows `"challenged": true` and the number can never be KNOWN_SCAM while it is under review.
@@ -9,7 +9,7 @@ Design choices (explain in the README):
 - We do NOT lower the reputation of people who reported a disputed number: anyone can file a
   dispute (there is no approval step), so doing that would let a scammer punish honest reporters.
 - The claimant's name, email and proof are stored for a human reviewer only. They are never
-  logged and never returned by any endpoint (privacy, docs/04).
+  logged and never returned by any endpoint (privacy).
 """
 
 import re

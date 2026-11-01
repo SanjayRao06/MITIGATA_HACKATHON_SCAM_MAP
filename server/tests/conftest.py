@@ -19,7 +19,7 @@ os.environ["HASH_SECRET"] = "test-secret"
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
-# Licence (P2): every endpoint except /health and /license needs a valid licence, so every test
+# Licence: every endpoint except /health and /license needs a valid licence, so every test
 # starts with a long, valid one signed by a throwaway test key (see tests/licence_testkit.py).
 import pytest  # noqa: E402
 

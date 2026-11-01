@@ -1,4 +1,4 @@
-"""P6 backend tests: the website is served, /meta and /stats work, and reports from the website
+"""Backend tests: the website is served, /meta and /stats work, and reports from the website
 get their network worked out by the server (and only ever stored hashed)."""
 
 import re
@@ -57,7 +57,7 @@ def test_api_paths_still_win_over_the_website():
 
 
 def test_no_banned_words_in_website_text():
-    # [PRD §5] rule 3: never "scammer" / "fraud" / "criminal" (or the Hindi word for fraud).
+    # Never "scammer" / "fraud" / "criminal" (or the Hindi word for fraud).
     banned = re.compile(r"scammer|fraud|criminal|this person is|धोखाधड़ी|धोखेबाज़", re.IGNORECASE)
     for f in ["index.html", "app.js", "i18n.js"]:
         text = (WEB / f).read_text(encoding="utf-8")

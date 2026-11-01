@@ -1,6 +1,6 @@
 """Time helpers: one place that decides how we read, store and print times.
 
-Rules (CLAUDE.md hard rule 6): we store every time as UTC without a timezone label
+Rules: we store every time as UTC without a timezone label
 (SQLite can't keep one), compare against the server clock, and print times in India time
 (+05:30) like "2026-10-27T18:21:04+05:30", which is the format the judges' test tool uses.
 """

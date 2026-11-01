@@ -1,8 +1,8 @@
-"""P9.2 tests: the "Why this result?" reasons in GET /lookup (`why` field).
+"""Tests: the "Why this result?" reasons in GET /lookup (`why` field).
 
 Checks that every verdict explains itself with the right reason codes (real scam, one person
 reporting many times, a Wi-Fi farm, verified, no reports, disputed), and that the reasons hold
-counts only: no ids, hashes, notes or times (privacy, docs/04).
+counts only: no ids, hashes, notes or times (privacy).
 """
 
 from urllib.parse import quote

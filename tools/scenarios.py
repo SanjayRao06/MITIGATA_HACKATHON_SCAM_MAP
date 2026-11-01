@@ -1,11 +1,11 @@
 """Scenario runner: fires realistic fake-attack and real-scam reports at the server and grades it.
 
-This is our own copy of the judges' test tool ([PRD §8], [PRD §11] "keep a small set of your own
-test reports"). It resets the server, sends hundreds of reports with timestamps relative to NOW,
+This is our own version of the judges' test tool. It resets the server, sends hundreds of
+reports with timestamps relative to NOW,
 then asks /lookup, /map and /alerts what they think and prints a PASS/FAIL table.
 
 Every number, UPI ID, reporter id and IP prefix is generated at random on each run, so nothing
-in the server can be "tuned" to these exact values (CLAUDE.md hard rule 2). Only the public
+in the server can be "tuned" to these exact values (no hardcoded test values). Only the public
 verified list and the area list from the brief are used as fixed values.
 
 Usage (from the repo root):
@@ -45,11 +45,11 @@ RESERVED = {PIN_SPAMMER, PIN_WIFI, PIN_BAKERY, PIN_OLD, PIN_SPIKE, PIN_STEADY, P
 # Real campaigns spread over these Bengaluru areas (none of the reserved ones).
 CAMPAIGN_PINS = ["560102", "560034", "560076", "560011", "560078", "560003", "560070", "560064"]
 
-# Words the app must never use about an identifier ([PRD §5] rule 3).
+# Words the app must never use about an identifier.
 BANNED_WORDS = ("scammer", "fraudster", "is a fraud", "criminal", "cheat")
-# Fields that must never appear in lookup evidence ([PRD §A.3]).
+# Fields that must never appear in lookup evidence.
 FORBIDDEN_EVIDENCE_KEYS = {"reporter_id", "reporter_hash", "ip_prefix", "ip_hash", "note"}
-LOOKUP_BUDGET_MS = 500  # [PRD §8] row 2: answers under half a second
+LOOKUP_BUDGET_MS = 500  # answers under half a second
 
 
 # ----------------------------------------------------------------------------- talking to a server
@@ -152,13 +152,13 @@ class Run:
 
     @staticmethod
     def phone_formats(normalized: str) -> list[str]:
-        """The 4 ways [PRD §A.0] rule 3 says people type one number; all must give the same answer."""
+        """The 4 ways people type one number; all must give the same answer."""
         d = normalized[3:]
         return [f"+91 {d[:5]} {d[5:]}", "0" + d, f"{d[:5]}-{d[5:]}", "91" + d]
 
     @staticmethod
     def ts(hours_ago: float) -> str:
-        """A time `hours_ago` hours before now in the PRD's format, e.g. 2026-10-31T14:00:00+05:30."""
+        """A time `hours_ago` hours before now in the API's format, e.g. 2026-10-31T14:00:00+05:30."""
         return (datetime.now(IST) - timedelta(hours=hours_ago)).isoformat(timespec="seconds")
 
     # ---- notes: real people write differently; fakes copy-paste ------------------------------
@@ -201,7 +201,7 @@ class Run:
     # ---- talking to the server ---------------------------------------------------------------
     def report(self, identifier_type: str, identifier_value: str, hours_ago: float, pincode: str,
                reporter_id: str, ip_prefix: str, **extra) -> dict:
-        """Build one report body exactly in the [PRD §A.2] shape."""
+        """Build one report body exactly in the API's shape."""
         area = self.areas[pincode]
         body = {
             "report_id": self.next_id("sc"),
@@ -240,7 +240,7 @@ class Run:
         self.results.append((scenario, what, expected, str(got), bool(passed)))
 
     def endpoint_check(self, scenario: str, what: str, expected: str, status: int, ok_fn) -> None:
-        """Check a /map or /alerts reply; a 404 means the endpoint isn't built yet (Step 6)."""
+        """Check a /map or /alerts reply; a 404 means the endpoint isn't built yet."""
         if status != 200:
             note = " (not built yet)" if status == 404 else ""
             self.check(scenario, what, expected, f"HTTP {status}{note}", False)
@@ -262,7 +262,7 @@ def masked(value) -> bool:
 
 # ----------------------------------------------------------------------------- the scenarios
 def scenario_junk(run: Run) -> None:
-    """Junk numbers, bad areas and impossible times must be rejected with 400 ([PRD §A.2])."""
+    """Junk numbers, bad areas and impossible times must be rejected with 400."""
     name = "junk"
     person, net = run.person(), run.network()
     cases = [
@@ -283,7 +283,7 @@ def scenario_junk(run: Run) -> None:
 
 
 def scenario_spammer(run: Run) -> None:
-    """One person reports the same number 6 times in under an hour ([PRD §4] 'Spamming')."""
+    """One person reports the same number 6 times in under an hour."""
     name = "spammer x6"
     number, person, net = run.phone(), run.person(), run.network()
     statuses = [run.send(run.report("phone", number, 0.9 - i * 0.15, PIN_SPAMMER, person, net,
@@ -298,7 +298,7 @@ def scenario_spammer(run: Run) -> None:
 
 
 def scenario_wifi_farm(run: Run) -> None:
-    """22 fake accounts on one Wi-Fi (same ip_prefix) report one number in ~90 min ([PRD §4])."""
+    """22 fake accounts on one Wi-Fi (same ip_prefix) report one number in ~90 min."""
     name = "wifi-farm 22 ids"
     number, net = run.phone(), run.network()
     for i in range(22):
@@ -317,11 +317,11 @@ def scenario_wifi_farm(run: Run) -> None:
 
 
 def scenario_bakery(run: Run) -> None:
-    """40 friends of a rival report a real bakery ([PRD §4] 'Report-bombing').
+    """40 friends of a rival report a real bakery.
 
-    Signature (docs/03): all brand-new accounts, a burst inside 2 hours, one area, copy-paste or
+    Signature: all brand-new accounts, a burst inside 2 hours, one area, copy-paste or
     empty notes, nothing lost, no screenshots. They are on different home networks, so the
-    same-Wi-Fi rule alone can't catch them; it takes note similarity + coordination (Step 4).
+    same-Wi-Fi rule alone can't catch them; it takes note similarity + coordination.
     We run it twice: on an unlisted bakery number, and on the verified Fresh Bakes number.
     """
     name = "bakery-bomb 40"
@@ -351,7 +351,7 @@ def scenario_bakery(run: Run) -> None:
     run.check(name, "verdict (verified Fresh Bakes)", "VERIFIED_BUSINESS", data.get("verdict"),
               data.get("verdict") == "VERIFIED_BUSINESS")
 
-    # 3) Fakes must not set off any alert in the bakery's area (+2 bonus, [PRD §A.5]).
+    # 3) Fakes must not set off any alert in the bakery's area (+2 bonus).
     status, alerts = run.get(f"/alerts?pincode={PIN_BAKERY}")
     run.endpoint_check(name, "fakes fire no alert", "alerts == []", status,
                        lambda: (alerts.get("alerts"), alerts.get("alerts") == []))
@@ -360,7 +360,7 @@ def scenario_bakery(run: Run) -> None:
 def scenario_real_campaign(run: Run) -> None:
     """A real scam wave: 8 unrelated people, 6 networks, own words, many areas, some money lost.
 
-    This must NOT be stopped by the trust rules ([PRD §4] 'Caution').
+    This must NOT be stopped by the trust rules.
     """
     name = "real campaign 8"
     number = run.phone()
@@ -379,11 +379,11 @@ def scenario_real_campaign(run: Run) -> None:
     run.check(name, "display_value shown in full", number, data.get("display_value"),
               data.get("display_value") == number)
 
-    # Every way of typing the number gives the same verdict ([PRD §8] row 2).
+    # Every way of typing the number gives the same verdict.
     verdicts = {run.lookup("phone", f)[1].get("verdict") for f in run.phone_formats(number)}
     run.check(name, "4 phone formats agree", "1 verdict", sorted(map(str, verdicts)), len(verdicts) == 1)
 
-    # Privacy: no reporter/IP/note in evidence, careful wording ([PRD §5]).
+    # Privacy: no reporter/IP/note in evidence, careful wording.
     keys = {k for ev in data.get("evidence", []) for k in ev}
     run.check(name, "evidence has no reporter/ip/note", "none", sorted(keys & FORBIDDEN_EVIDENCE_KEYS) or "none",
               not (keys & FORBIDDEN_EVIDENCE_KEYS))
@@ -420,7 +420,7 @@ def scenario_real_upi(run: Run) -> None:
 
 
 def scenario_small_real(run: Run) -> None:
-    """Only 2 real people reported it: SUSPICIOUS and still hidden ([PRD §5] rule 2)."""
+    """Only 2 real people reported it: SUSPICIOUS and still hidden."""
     name = "small real 2"
     number = run.phone()
     for i in range(2):
@@ -434,7 +434,7 @@ def scenario_small_real(run: Run) -> None:
 
 
 def scenario_lookup_basics(run: Run) -> None:
-    """Never-reported numbers and the brief's verified list ([PRD §A.3], [PRD §C])."""
+    """Never-reported numbers and the brief's verified list."""
     name = "lookup basics"
     status, data = run.lookup("phone", run.phone())
     run.check(name, "unreported number", "200 NO_REPORTS", f"{status} {data.get('verdict')}",
@@ -447,7 +447,7 @@ def scenario_lookup_basics(run: Run) -> None:
 
 
 def scenario_old_reports(run: Run) -> None:
-    """4 real reports from 30 days ago: they must never appear on the 7-day map ([PRD §8] row 3)."""
+    """4 real reports from 30 days ago: they must never appear on the 7-day map."""
     name = "old reports 30d"
     number = run.phone()
     for i in range(4):
@@ -470,7 +470,7 @@ def _real_area_reports(run: Run, pincode: str, hours_ago_list, types) -> None:
 
 
 def scenario_spike(run: Run) -> None:
-    """~2 real reports/day for a week, then 10 today: SPIKE ([PRD §A.5])."""
+    """~2 real reports/day for a week, then 10 today: SPIKE."""
     name = "spike area"
     types = ["otp-call", "fake-kyc-link"]
     prior = [24 + d * 24 + h for d in range(7) for h in (5, 15)]        # 14 reports, days 1..7 ago
@@ -482,7 +482,7 @@ def scenario_spike(run: Run) -> None:
 
 
 def scenario_steady(run: Run) -> None:
-    """6 real reports every day for 8 days: busy but normal, so NO alert ([PRD §8] row 3)."""
+    """6 real reports every day for 8 days: busy but normal, so NO alert."""
     name = "steady area"
     types = ["otp-call", "fake-kyc-link"]
     times = [d * 24 + 1 + h * 3.5 for d in range(8) for h in range(6)]  # 48 reports, 6 per day
@@ -507,7 +507,7 @@ def scenario_new_type(run: Run) -> None:
 
 
 def scenario_dispute(run: Run) -> None:
-    """4 real people report a number, then its owner disputes it ([PRD §A.7], bonus).
+    """4 real people report a number, then its owner disputes it (bonus).
 
     Before: KNOWN_SCAM. After the dispute: challenged=true, never KNOWN_SCAM, and the number is
     hidden again while it is under review.
@@ -601,7 +601,7 @@ def scenario_other_cities(run: Run) -> None:
 
 
 def check_latency(run: Run, extra: int) -> None:
-    """Lookups must answer in under 500 ms ([PRD §8] row 2). Optionally fire `extra` more lookups."""
+    """Lookups must answer in under 500 ms. Optionally fire `extra` more lookups."""
     for _ in range(extra):
         run.lookup("phone", run.phone())
     times = sorted(run.lookup_ms)

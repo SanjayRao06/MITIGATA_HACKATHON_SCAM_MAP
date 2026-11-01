@@ -1,4 +1,4 @@
-"""Trust rules: decide how much each report should count (docs/03, [PRD §4]).
+"""Trust rules: decide how much each report should count.
 
 The idea in one line: don't count REPORTS, count INDEPENDENT HUMANS. A fake wave is one source
 wearing many masks; a real scam wave is many unrelated people writing in their own words.
@@ -29,7 +29,7 @@ from datetime import timedelta
 
 # ---------------------------------------------------------------- tunable constants
 TRUSTED_WEIGHT = 0.5            # a source counts as an independent person at or above this weight
-KNOWN_SCAM_MIN_SOURCES = 3      # trusted sources needed for KNOWN_SCAM (and to unmask, [PRD §5] rule 2)
+KNOWN_SCAM_MIN_SOURCES = 3      # trusted sources needed for KNOWN_SCAM (and to unmask)
 KNOWN_SCAM_MIN_NETWORKS = 3     # ...from at least this many different ip_prefixes
 
 NETWORK_MERGE_WINDOW = timedelta(hours=24)   # L2: same ip_prefix within this window = one source
@@ -43,7 +43,7 @@ COORD_THRESHOLD = 0.6           # score at/above this = coordinated wave
 COORD_PENALTY = 0.2             # brand-new accounts in a coordinated wave count this much
 BURST_WINDOW = timedelta(hours=2)
 # A wave is NOT organised when this share (or more) of its people wrote their own unique words AND
-# came from different networks: that is exactly how the brief describes a real campaign ([PRD §4]
+# came from different networks: that is exactly how the brief describes a real campaign (
 # "many different, unrelated people writing in their own words"). Without this, a real wave that
 # hits ONE neighbourhood within an hour (all new accounts, nobody lost money yet) looked organised.
 INDEPENDENT_VOICES = 0.8
@@ -283,7 +283,7 @@ def over_rate_limit(new_time, other_times: list) -> bool:
 
     In: the new report's time and the times of this reporter's stored reports.
     Times are the REPORTS' OWN times, not arrival time: the test tool replays weeks of reports in
-    seconds, so arrival time would wrongly block real people ([PRD §A.0] rule 1).
+    seconds, so arrival time would wrongly block real people.
     "More than 3 in any 60 minutes" is checked by sliding a window across every position that
     contains the new report.
     """

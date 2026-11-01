@@ -1,4 +1,4 @@
-"""Step 0 tests: /health works and the request log contains nothing personal."""
+"""Tests: /health works and the request log contains nothing personal."""
 
 import logging
 
@@ -10,7 +10,7 @@ client = TestClient(app)
 
 
 def test_health_returns_ok():
-    """GET /health -> 200 {"ok": true} exactly as docs/01 says."""
+    """GET /health -> 200 {"ok": true} exactly as the API spec says."""
     r = client.get("/health")
     assert r.status_code == 200
     assert r.json() == {"ok": True}

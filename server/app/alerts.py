@@ -1,4 +1,4 @@
-"""GET /alerts logic: tell people only when something UNUSUAL happens in an area ([PRD §A.5]).
+"""GET /alerts logic: tell people only when something UNUSUAL happens in an area.
 
 Two kinds of alert, both counting only TRUSTED reports (so fake waves never fire one, +2 bonus):
 - SPIKE:    reports in the last 24 h are at least double the daily average of the 7 days before,
@@ -6,11 +6,11 @@ Two kinds of alert, both counting only TRUSTED reports (so fake waves never fire
 - NEW_TYPE: a scam type reported in the last 24 h that wasn't seen in that area in the 30 days
             before. In an area with recent history, one trusted report of a never-seen type is
             news. In an area with no history we wait for a second independent report, so the very
-            first report in a quiet area doesn't sound an alarm ("never for every report", [PRD §3]).
+            first report in a quiet area doesn't sound an alarm ("never for every report").
 Both count PEOPLE, not reports: inside a window each reporter counts once, so one person
 reporting several different numbers can't fake a spike or a new type ("one person reporting many
-times is still one person", [PRD §4]).
-Times: each report's `occurred_at` vs the server clock ([PRD §A.0] rule 1).
+times is still one person").
+Times: each report's `occurred_at` vs the server clock.
 """
 
 from collections import Counter

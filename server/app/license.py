@@ -1,6 +1,6 @@
-"""Licence: the server only works while it holds a valid, signed, unexpired licence ([PRD §6]).
+"""Licence: the server only works while it holds a valid, signed, unexpired licence.
 
-How it works (wax-seal idea, docs/05): we sign `{licensee, expires_at}` on our laptop with a PRIVATE
+How it works (wax-seal idea): we sign `{licensee, expires_at}` on our laptop with a PRIVATE
 key that never leaves it. The server has only the matching PUBLIC key (below), which can check a
 seal but never make one. Change one character of the date and the check fails.
 
@@ -8,7 +8,7 @@ seal but never make one. Change one character of the date and the check fails.
   -> 403 {"error": "LICENSE_EXPIRED"}. The check is an in-memory comparison (microseconds).
 - POST /license swaps in a new licence immediately: no restart. It's also saved in the database,
   so restarts and redeploys keep it. Expiry only LOCKS the server; no data is ever deleted.
-- Clock guard (bonus, [PRD §6]): we remember the latest time we've seen. If the clock ever jumps
+- Clock guard (bonus): we remember the latest time we've seen. If the clock ever jumps
   back more than 2 minutes (someone setting it back a year to stretch the licence), we lock.
 """
 
@@ -33,7 +33,7 @@ from app.privacy import log
 # signatures. The private half is `private.key` on Sanjay's laptop, never in git.
 PUBLIC_KEY_B64 = "zwy/FoUOhkbVHOWcCyhIgQDVPEFpsmvGn8+iURCawak="
 
-# Paths that keep working without a licence ([PRD §6] step 3): the alive check, and the licence
+# Paths that keep working without a licence: the alive check, and the licence
 # endpoints themselves (otherwise an expired server could never be renewed).
 # The website's page ("/") and its files ("/static/...") also stay open, but they hold no data: they
 # are what draws the "Licence expired" screen. Every data request the page makes still gets the 403.
@@ -46,7 +46,7 @@ CLOCK_TOLERANCE = timedelta(minutes=2)
 # saves the latest time it has seen. Picks up a licence uploaded to another worker, within a minute.
 SYNC_SECONDS = 30
 
-# Error codes in replies (docs/05).
+# Error codes in replies.
 EXPIRED = {"error": "LICENSE_EXPIRED"}
 
 
@@ -236,7 +236,7 @@ def install(lic: dict) -> dict:
 
 # ----------------------------------------------------------------------------- middleware + routes
 async def license_middleware(request: Request, call_next):
-    """Runs on EVERY request ([PRD §6] step 3): lock everything except /health and /license.
+    """Runs on EVERY request: lock everything except /health and /license.
 
     Browser pre-flight checks (OPTIONS) also pass, so a website on another address can still read
     the 403 reply and show the "Licence expired" screen.
@@ -269,7 +269,7 @@ LICENSE_EXAMPLE = {"licensee": "Demo Bank", "expires_at": "2026-11-15T10:05:00+0
 
 @router.get("/license")
 async def get_license():
-    """Who the server is licensed to, until when, and whether it's working ([PRD §6] demo step 1).
+    """Who the server is licensed to, until when, and whether it's working.
 
     Out: {licensee, expires_at, valid, status, seconds_left, server_time}. Always 200, even when expired.
     """
@@ -283,7 +283,7 @@ async def get_license():
 @router.post("/license")
 async def post_license(body: dict = Body(..., openapi_examples={
         "licence": {"summary": "A signed licence file", "value": LICENSE_EXAMPLE}})):
-    """Upload a new licence; it takes effect immediately, no restart ([PRD §6] demo steps 2 and 4).
+    """Upload a new licence; it takes effect immediately, no restart.
 
     No password needed: only we can make a valid signature, so the signature IS the authentication.
     Out: 200 with the GET /license body, or 400 {"error": INVALID_SIGNATURE | INVALID_LICENSE |

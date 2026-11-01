@@ -1,4 +1,4 @@
-"""P4 tests: POST /challenges and how /lookup treats a disputed number ([PRD §A.7])."""
+"""Tests: POST /challenges and how /lookup treats a disputed number."""
 
 import logging
 from datetime import datetime, timedelta, timezone

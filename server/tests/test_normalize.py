@@ -1,4 +1,4 @@
-"""Step 1 tests: every example from docs/02-normalization.md, plus a few edge cases."""
+"""Tests: identifier normalization and validation, with edge cases."""
 
 import pytest
 

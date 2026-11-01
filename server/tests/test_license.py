@@ -1,6 +1,6 @@
-"""P2 tests: licence signature, lock on expiry, renew without restart, clock-rollback guard.
+"""Tests: licence signature, lock on expiry, renew without restart, clock-rollback guard.
 
-Mirrors the judges' 4-step live demo ([PRD §6]) plus the edge cases from docs/05. Instead of waiting
+Mirrors the judges' 4-step live demo plus edge cases. Instead of waiting
 5 real minutes we move the server's clock (`license.clock`) forward. A valid test licence is
 installed before every test by conftest.py.
 """
@@ -30,7 +30,7 @@ def lookup(value: str = "+91 98765 43210"):
 
 
 def a_report(report_id: str = "lic_rep_1") -> dict:
-    """A valid report body ([PRD §A.2])."""
+    """A valid report body."""
     when = (timeutil.now_utc() - timedelta(hours=1)).isoformat() + "+00:00"
     return {"report_id": report_id, "occurred_at": when, "reporter_id": "r_lic", "ip_prefix": "10.1.2",
             "channel": "Phone call", "scam_type": "otp-call", "identifier_type": "phone",

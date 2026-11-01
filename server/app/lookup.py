@@ -1,6 +1,6 @@
 """GET /lookup logic: what do we know about one identifier?
 
-Answers with exactly one verdict ([PRD §A.3]): VERIFIED_BUSINESS, NO_REPORTS, KNOWN_SCAM or
+Answers with exactly one verdict: VERIFIED_BUSINESS, NO_REPORTS, KNOWN_SCAM or
 SUSPICIOUS. Each lookup re-reads the identifier's reports and runs the trust rules (trust.py), which
 is always correct even when many reports arrive at once, and takes a few milliseconds.
 
@@ -23,7 +23,7 @@ MAX_EVIDENCE = 20
 
 
 def message_for(verdict: str, people: int, belongs_to: str | None, challenged: bool) -> str:
-    """Careful, human wording for the app ([PRD §5] rule 3: say "reported", never accuse)."""
+    """Careful, human wording for the app (say "reported", never accuse)."""
     if verdict == "VERIFIED_BUSINESS":
         return f"Verified business: {belongs_to}" if belongs_to else "Verified business"
     if verdict == "NO_REPORTS":
@@ -40,7 +40,7 @@ def reasons_for(verdict: str, report_count: int, result: dict, challenged: bool)
 
     In: the verdict, number of stored reports, the trust-rule result (trust.assess) and the dispute flag.
     Out: a list like [{"code": "same_network", "n": 21}, ...], in reading order.
-    Privacy (docs/04): counts only. No ids, hashes, notes, networks or times, so nothing in it can
+    Privacy: counts only. No ids, hashes, notes, networks or times, so nothing in it can
     point to a reporter. It shows the same thinking as the README's attack table, live, per number.
     """
     ex = result.get("explain", {})
@@ -94,7 +94,7 @@ def _find(conn, id_type: str, value: str):
 def lookup(id_type: str, value: str) -> dict:
     """Build the /lookup reply for an already-normalized identifier.
 
-    In: type + normalized value. Out: the JSON dict from [PRD §A.3] plus a friendly `message`.
+    In: type + normalized value. Out: the /lookup JSON plus a friendly `message`.
     """
     # 1) Load the identifier and judge its reports with the trust rules.
     verified = reference.get_verified(id_type, value)
@@ -107,7 +107,7 @@ def lookup(id_type: str, value: str) -> dict:
     #    (e.g. a fake wave), we still say "1" so the reply never claims nobody reported it.
     people = result["trusted_sources"] or (1 if rows else 0)
 
-    # 3) Verdict, in priority order (docs/03 "Verdict"): verified list always wins, then no
+    # 3) Verdict, in priority order: verified list always wins, then no
     #    reports, then KNOWN_SCAM only if the trust rules allow it and nobody disputed it.
     if verified:
         verdict = "VERIFIED_BUSINESS"
@@ -120,7 +120,7 @@ def lookup(id_type: str, value: str) -> dict:
 
     # 4) Show the full value only for verified businesses or 3+ independent trusted people.
     #    A disputed number stays hidden while it is under review: if the business is right, we
-    #    must not have its real number on screen next to "reported" (privacy first, docs/04).
+    #    must not have its real number on screen next to "reported" (privacy first).
     enough_people = result["trusted_sources"] >= trust.KNOWN_SCAM_MIN_SOURCES
     show_full = verified is not None or (enough_people and not challenged)
     display_value = value if show_full else mask(id_type, value)
@@ -143,7 +143,7 @@ def lookup(id_type: str, value: str) -> dict:
         "display_value": display_value,
         "evidence": evidence,
         "challenged": challenged,
-        # extra fields (allowed by the PRD): friendly text for the app
+        # extra fields (allowed by the API spec): friendly text for the app
         "message": message_for(verdict, people, verified["belongs_to"] if verified else None, challenged),
         "masked": not show_full,
         "why": reasons_for(verdict, len(rows), result, challenged),   # "Why this result?" panel

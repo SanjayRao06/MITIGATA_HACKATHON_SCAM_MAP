@@ -1,7 +1,7 @@
-"""Step 3 tests: the scenario runner (tools/scenarios.py) works end to end.
+"""Tests: the scenario runner (tools/scenarios.py) works end to end.
 
 We run the whole script inside pytest against the app in memory (no real server needed).
-Some scenarios are SUPPOSED to fail until Step 4 (trust engine) and Step 6 (map/alerts) exist,
+Some scenarios are SUPPOSED to fail until the trust engine and map/alerts exist,
 so here we only insist on the checks that must pass at every step: junk is rejected, real scams
 are found, verified numbers stay verified, small cases stay hidden. Those are our regression guard:
 if a later trust rule starts hiding real scams, these tests go red.
@@ -34,7 +34,7 @@ class InProcessServer:
 
 # Scenarios whose every check must pass right now and forever after.
 MUST_ALWAYS_PASS = {"junk", "real campaign 8", "real UPI 5", "small real 2", "lookup basics"}
-# Checks that need /map, which arrives in Step 6 (skip them in the guard until then).
+# Checks that need /map, which may not exist yet (skip them in the guard until then).
 NEEDS_LATER_STEP = ("/map",)
 
 

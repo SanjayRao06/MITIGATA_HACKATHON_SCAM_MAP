@@ -1,4 +1,4 @@
-"""Upload a licence file to a server, show the server's current licence, or prove tampering fails ([PRD §6] demo).
+"""Upload a licence file to a server, show the server's current licence, or prove tampering fails.
 
 Usage (from the repo root):
     python tools\\upload_license.py licenses\\long.json            # upload to the local server

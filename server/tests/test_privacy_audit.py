@@ -1,6 +1,6 @@
-"""P5 privacy audit: one test per box in PROGRESS P5 (5.1-5.4 and 5.6).
+"""Privacy audit: one test per privacy rule.
 
-These tests are the proof for the "privacy never slips" rule ([PRD §5]; any slip = disqualification):
+These tests are the proof for the "privacy never slips" rule (any slip = disqualification):
   5.1  no banned wording ("scammer", "fraud", ...) anywhere a user can read it
   5.2  the database has no column that could hold a raw reporter id / IP / name / phone / location
   5.3  the log shows only method, path, status and milliseconds
@@ -27,7 +27,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 SERVER = Path(__file__).resolve().parents[1]
 WEB = SERVER / "web"
 
-# Words the brief forbids us to show ([PRD §5] rule 3), English and Hindi.
+# Words the brief forbids us to show, English and Hindi.
 BANNED = re.compile(r"scammer|fraud|criminal|this person is|धोखाधड़ी|धोखेबाज़", re.IGNORECASE)
 
 
@@ -97,7 +97,7 @@ def test_banned_words_not_in_any_api_reply():
 
 
 # ---------------------------------------------------------------- 5.2 database audit
-# A column called any of these would mean we keep something the brief forbids ([PRD §5] rule 1).
+# A column called any of these would mean we keep something the brief forbids.
 FORBIDDEN_COLUMN = re.compile(r"(^|_)(ip|phone|mobile|lat|lng|lon|latitude|longitude|gps|address|reporter_id|reporter_name|email_address)($|_)")
 
 
@@ -206,7 +206,7 @@ def raw_visible(text, digits="9876501234"):
 
 @pytest.mark.parametrize("n,shown", [(1, False), (2, False), (3, True)])
 def test_masked_until_three_people(n, shown):
-    """1 and 2 trusted reporters: masked. 3: shown in full. [PRD §5] rule 2."""
+    """1 and 2 trusted reporters: masked. 3: shown in full."""
     for i in range(n):
         send(i)
     text =client.get("/lookup?type=phone&value=9876501234").text
@@ -259,6 +259,6 @@ def test_no_hardcoded_identifiers_in_server_code():
 
 
 def test_server_timing_header_is_only_a_number():
-    """Every reply says how long the server took (for the live speed check, P5.5) and nothing else."""
+    """Every reply says how long the server took (for the live speed check) and nothing else."""
     r = client.get("/lookup?type=phone&value=9876501234")
     assert re.fullmatch(r"app;dur=\d+\.\d", r.headers["server-timing"])

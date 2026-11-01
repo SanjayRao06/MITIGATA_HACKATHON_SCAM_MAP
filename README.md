@@ -213,17 +213,22 @@ python tools/scenarios.py --base http://localhost:8000 --seed 7
 This sends the full-size attacks (22 accounts, 40 friends, the spammer, junk) plus real scam waves, and
 prints a PASS/FAIL table: **47/47 checks pass**.
 
-**Run the tests:** `cd server && .venv/Scripts/python -m pytest -q` (237 tests).
+**Run the tests:** `cd server && .venv/Scripts/python -m pytest -q` (255 tests).
 
 ---
 
 ## 8. What's where
 
 ```
-server/app/      the server: trust.py (trust rules) · license.py · lookup.py · reports.py · privacy.py · geo.py, alerts.py
-server/web/      the website (plain JavaScript, English + Hindi)
-server/tests/    237 tests
-tools/           scenarios.py (attacks + demo data) · make_demo_examples.py · make_license.py · upload_license.py
+server/app/         the server: main.py (routes) · trust.py (trust rules) · lookup.py · reports.py
+                    normalize.py · privacy.py · license.py · geo.py, alerts.py · challenges.py · stats.py
+server/app/data/    areas, verified identifiers, scam types, channels
+server/web/         the website (plain JavaScript, English + Hindi)
+server/tests/       255 tests (pytest)
+tools/              scenarios.py (attacks + demo data) · make_demo_examples.py · latency_check.py
+                    keygen.py · make_license.py · upload_license.py (licence signing and upload)
+tools/samples/      demo_examples.txt (copy-paste walkthrough for /docs)
+render.yaml         hosting settings
 ```
 
 Hosted on Render (Singapore) with a Neon Postgres database, and auto-deployed on every push.

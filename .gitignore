@@ -20,6 +20,5 @@ node_modules/
 dist/
 .neon
 .env.local
-# laptop-only files: raw Google Stitch exports, scratch notes (screenshots we use are in docs/design/stitch)
+# laptop-only scratch files
 _local/
-stitch_scam_map_india_web_app*/

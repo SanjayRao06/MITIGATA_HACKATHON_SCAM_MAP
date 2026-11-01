@@ -1,11 +1,11 @@
-"""GET /map logic: how many scam reports each area had recently ([PRD §A.4], docs/06).
+"""GET /map logic: how many scam reports each area had recently.
 
 - Areas and their map points come ONLY from data/areas.json (the brief's Appendix B). We never
-  store or show a reporter's own location ([PRD §5] rule 1, [PRD §8] row 4).
+  store or show a reporter's own location.
 - Only TRUSTED reports count (one per independent source, set by the trust rules), so a fake
   wave can't light up an area on the map.
 - Time window uses each report's `occurred_at` against the server clock; default last 7 days,
-  so month-old reports never appear ([PRD §8] row 3).
+  so month-old reports never appear.
 """
 
 import math
@@ -22,7 +22,7 @@ DEFAULT_DAYS = 7
 DEFAULT_RADIUS_KM = 2.0
 MAX_DAYS = 365
 MAX_RADIUS_KM = 3000.0          # big enough for an all-India view from the app
-# Severity scale (our own, as the PRD allows): by trusted report count in the window.
+# Severity scale (our own, the brief leaves it open): by trusted report count in the window.
 SEVERITY_LEVELS = [(10, "CRIT"), (5, "HIGH"), (0, "MED")]
 # Scams that cause the most harm bump an area up one level (and so does a big loss).
 HIGH_HARM_TYPES = {"digital-arrest", "sextortion"}

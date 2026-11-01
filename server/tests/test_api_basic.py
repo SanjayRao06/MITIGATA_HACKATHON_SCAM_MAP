@@ -1,4 +1,4 @@
-"""Step 2 tests: POST /reports, GET /lookup, POST /admin/reset, end to end.
+"""Tests: POST /reports, GET /lookup, POST /admin/reset, end to end.
 
 Each test starts from an empty database (the `clean` fixture calls /admin/reset).
 Times are generated relative to "now", like the judges' test tool does.
@@ -18,12 +18,12 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 
 def ts(hours_ago: float = 1) -> str:
-    """A report time `hours_ago` hours before now, in the PRD's format."""
+    """A report time `hours_ago` hours before now, in the API's format."""
     return (datetime.now(IST) - timedelta(hours=hours_ago)).isoformat(timespec="seconds")
 
 
 def report(**overrides) -> dict:
-    """A valid report body (from [PRD §A.2]); override any field per test."""
+    """A valid report body; override any field per test."""
     body = {
         "report_id": None, "occurred_at": ts(2), "reported_at": ts(1),
         "reporter_id": "r_aaaa0001", "ip_prefix": "103.21.58",
@@ -166,7 +166,7 @@ def test_three_people_known_scam_and_unmasked():
 
 
 def test_one_person_six_times_is_one_person_and_rate_limited():
-    # 6 reports inside one hour from the same reporter: 3 stored, then 429 ([PRD §A.0] rule 4).
+    # 6 reports inside one hour from the same reporter: 3 stored, then 429.
     codes = [client.post("/reports", json=report(report_id=f"rep_s{i}", reporter_id="r_spam",
                                                  occurred_at=ts(1 - i * 0.1), reported_at=ts(0.9 - i * 0.1))
                          ).status_code for i in range(6)]
@@ -219,7 +219,7 @@ def test_wording_never_accuses():
     ("url", "https://sbi-kyc.in/pay", "sbi***.in/..."),
     ("sender_id", "HDFCBK", "HD****"),
 ])
-def test_mask_formats_match_prd(id_type, value, expected):
+def test_mask_formats_match_spec(id_type, value, expected):
     assert mask(id_type, value) == expected
 
 

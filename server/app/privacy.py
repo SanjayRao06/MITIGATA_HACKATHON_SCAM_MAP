@@ -1,9 +1,9 @@
-"""Privacy helpers: hashing, masking and safe request logging (docs/04-privacy.md).
+"""Privacy helpers: hashing, masking and safe request logging.
 
 - hash_value(): reporter ids and IP prefixes are stored only as HMAC hashes. We can still tell
   "same reporter / same network" apart, but a database dump reveals nothing about who reported.
 - mask(): hides an identifier ("98XXXXX210") until at least 3 different people have reported it,
-  so one angry person can't publicly label someone ([PRD §5] rule 2).
+  so one angry person can't publicly label someone.
 - Logging: uvicorn's built-in access log prints client IPs and full URLs (which can contain an
   identifier), so we switch it off and log only method, path, status and latency.
 """
@@ -39,7 +39,7 @@ def hash_value(value: str) -> str:
 def mask(identifier_type: str, value: str) -> str:
     """Hide most of a normalized identifier.
 
-    In: type + normalized value. Out: masked text (formats from [PRD §A.3] / docs/04):
+    In: type + normalized value. Out: masked text (formats from the API spec):
       +919876543210 -> 98XXXXX210 | 18001600 -> 18XXX600 | ravi12@okaxis -> r***@okaxis
       https://sbi-kyc.in/pay -> sbi***.in/... | HDFCBK -> HD****
     """

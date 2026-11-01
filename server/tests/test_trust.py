@@ -1,4 +1,4 @@
-"""P1 tests: each trust layer on its own, plus whole attack / real-scam patterns.
+"""Tests: each trust layer on its own, plus whole attack / real-scam patterns.
 
 These call trust.py directly (no server, no database), so each rule can be checked in isolation.
 The most important tests are the "must NOT be blocked" ones: real scams that look a bit like an
@@ -138,7 +138,7 @@ def test_real_campaign_8_people_is_known_scam():
 
 
 def test_fast_real_wave_within_two_hours_still_known_scam():
-    # A real campaign can also arrive in a burst ([PRD §4] "Caution"): all new people, all within
+    # A real campaign can also arrive in a burst: all new people, all within
     # 2 hours, but different networks, areas and words, and some lost money.
     pins = ["560102", "560034", "560076", "560011", "560078", "560003"]
     reports = [rep(f"real{i}", f"net{i}", 2 - i * 0.3, note=OWN_WORDS[i], pin=pins[i],
@@ -149,7 +149,7 @@ def test_fast_real_wave_within_two_hours_still_known_scam():
 
 
 def test_real_wave_in_one_area_within_an_hour_still_known_scam():
-    # [PRD §4] "Caution": a scam call blast can hit ONE neighbourhood in one hour. Everyone is new
+    # A scam call blast can hit ONE neighbourhood in one hour. Everyone is new
     # and nobody lost money yet, but they are on different networks and wrote their own words,
     # so this is independent voices, not an organised wave.
     reports = [rep(f"neighbour{i}", f"net{i}", 1 - i * 0.1, note=OWN_WORDS[i], pin="560102")

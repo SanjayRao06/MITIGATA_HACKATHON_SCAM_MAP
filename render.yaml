@@ -1,9 +1,9 @@
 # Render "blueprint": one web service + one managed Postgres database, both on FREE plans.
 # Deploy: push the repo to GitHub, then in Render choose New > Blueprint and pick this repo.
 # NOTE: Render asked us for card details on the Blueprint flow, so we actually deploy by hand
-# (New > Web Service + a free Neon database). The same settings are in PROGRESS.md, Step 0.
+# (New > Web Service + a free Neon database) with the same settings.
 # This file stays as the written record of our settings.
-# Free-plan catches (see PROGRESS.md):
+# Free-plan catches:
 #  - The web service sleeps after ~15 min with no traffic; the next request then takes
 #    30-60 s. Fix: a free uptime pinger (e.g. UptimeRobot / cron-job.org) hits /health
 #    every 5-10 min. One always-awake service fits inside the 750 free hours/month.
@@ -16,7 +16,7 @@ services:
     runtime: python
     plan: free
     # Singapore is Render's closest region to India: lookups must answer in < 500 ms
-    # (PRD §3/§8) and a US region adds ~250 ms of network round-trip on its own.
+    # and a US region adds ~250 ms of network round-trip on its own.
     region: singapore
     rootDir: server
     buildCommand: pip install -r requirements.txt
@@ -30,7 +30,7 @@ services:
         fromDatabase:
           name: scam-map-db
           property: connectionString
-      - key: HASH_SECRET          # used from Step 2 to HMAC reporter ids / IP prefixes
+      - key: HASH_SECRET          # used to HMAC reporter ids / IP prefixes
         generateValue: true
 
 databases:

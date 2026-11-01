@@ -6,7 +6,7 @@ Same code for both places we run:
 We deliberately do NOT read DATABASE_URL from `.env.local` on the laptop. Otherwise local tests,
 or a local /admin/reset, would wipe the live database the judges use.
 
-Privacy (docs/04): no table has a column for reporter name, phone, raw reporter_id, raw IP or
+Privacy: no table has a column for reporter name, phone, raw reporter_id, raw IP or
 lat/lng. Reporter id and IP prefix are stored only as HMAC hashes (see privacy.py).
 """
 
@@ -25,7 +25,7 @@ identifiers = Table(
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("type", String(16), nullable=False),          # phone | upi | url | sender_id
     Column("value", String(512), nullable=False),        # normalized form, e.g. +919876543210
-    Column("challenged", Boolean, nullable=False, default=False),  # set by POST /challenges (Step 7)
+    Column("challenged", Boolean, nullable=False, default=False),  # set by POST /challenges
     Column("created_at", DateTime, nullable=False),
     UniqueConstraint("type", "value", name="uq_identifier"),
 )
@@ -61,7 +61,7 @@ Index("ix_reports_identifier", reports.c.identifier_id)
 Index("ix_reports_reporter", reports.c.reporter_hash)
 Index("ix_reports_area_time", reports.c.pincode, reports.c.occurred_at)
 
-# One row per (hashed) reporter. Reputation is used by the trust engine in Step 4.
+# One row per (hashed) reporter. Reputation is used by the trust engine.
 reporters = Table(
     "reporters", metadata,
     Column("reporter_hash", String(64), primary_key=True),
@@ -69,7 +69,7 @@ reporters = Table(
     Column("reputation", Float, nullable=False, default=0.6),
 )
 
-# Business disputes (POST /challenges, Step 7). Claimant details are never logged or shown.
+# Business disputes (POST /challenges). Claimant details are never logged or shown.
 challenges = Table(
     "challenges", metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
@@ -81,7 +81,7 @@ challenges = Table(
     Column("created_at", DateTime, nullable=False),
 )
 
-# Licence (Step 5): one row holding the current licence JSON. Survives restarts; never reset.
+# Licence: one row holding the current licence JSON. Survives restarts; never reset.
 license_table = Table(
     "license", metadata,
     Column("id", Integer, primary_key=True),
@@ -89,7 +89,7 @@ license_table = Table(
     Column("updated_at", DateTime, nullable=False),
 )
 
-# Clock guard (Step 5): the latest time the server has seen, to catch clocks set backwards.
+# Clock guard: the latest time the server has seen, to catch clocks set backwards.
 clock_guard = Table(
     "clock_guard", metadata,
     Column("id", Integer, primary_key=True),

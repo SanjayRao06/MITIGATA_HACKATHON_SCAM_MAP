@@ -9,7 +9,7 @@ next to the demo data, never mixes counts).
 What it covers:
 - Part A, on the website (your phone): normal reports of every kind (phone call, SMS sender, UPI,
   fake link, "something else", a picked date, Hindi, icons only), then Check / Map / Dashboard.
-- Part B, the fake-report tricks of [PRD §4] (spamming, many accounts on one Wi-Fi, report-bombing,
+- Part B, the fake-report tricks (spamming, many accounts on one Wi-Fi, report-bombing,
   reporting a verified business, junk) next to a real scam. One phone can't pretend to be 8 people
   on 8 networks, so those reports are pasted into /docs; every RESULT is then checked on the website.
 - Part C: map window, alerts, dispute, licence.
@@ -59,7 +59,7 @@ class Maker:
     def report(self, value: str, hours_ago: float, pincode: str, reporter: str, net: str, *,
                id_type: str = "phone", channel: str = "Phone call", scam_type: str = "digital-arrest",
                note: str = "", screenshot: bool = False, lost: int = 0) -> dict:
-        """One POST /reports body exactly in the [PRD §A.2] shape."""
+        """One POST /reports body exactly in the API's shape."""
         self.n += 1
         area = AREAS[pincode]
         return {
@@ -382,7 +382,7 @@ def render(sections: list[dict], now: datetime) -> str:
     ]
     for sec in sections:
         if sec["title"].startswith("B1"):
-            out += ["", "", "PART B - A REAL SCAM vs EVERY FAKE-REPORT TRICK ([PRD §4]) - reports in /docs, checks on the website"]
+            out += ["", "", "PART B - A REAL SCAM vs EVERY FAKE-REPORT TRICK - reports in /docs, checks on the website"]
         if sec["title"].startswith("C1"):
             out += ["", "", "PART C - MAP, ALERTS, DISPUTE"]
         out += ["", "-" * 72, sec["title"], "-" * 72] + sec["intro"] + [""]

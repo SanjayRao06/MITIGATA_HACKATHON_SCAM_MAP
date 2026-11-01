@@ -1,4 +1,4 @@
-"""P3 tests: GET /map and GET /alerts ([PRD §A.4], [PRD §A.5], docs/06).
+"""Tests: GET /map and GET /alerts.
 
 Reports are sent through the real API, one genuine person per scam number (own id, own network,
 own words), so they are trusted. Fake waves are sent the way an attacker would.

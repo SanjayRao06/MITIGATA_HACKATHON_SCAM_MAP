@@ -47,11 +47,11 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleString(S.lang === "hi" ? "hi-IN" : "en-IN",
     { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
 }
-/** A Date in the PRD's time format, in India time: 2026-10-31T14:00:00+05:30. */
+/** A Date in the API's time format, in India time: 2026-10-31T14:00:00+05:30. */
 function toIstIso(date) {
   return new Date(date.getTime() + 5.5 * 3600e3).toISOString().slice(0, 19) + "+05:30";
 }
-/** A time `hoursAgo` hours before now, in the PRD's format. */
+/** A time `hoursAgo` hours before now, in the API's format. */
 function istIso(hoursAgo = 0) { return toIstIso(new Date(Date.now() - hoursAgo * 3600e3)); }
 /** A Date as the "YYYY-MM-DDTHH:MM" text a datetime-local box uses (in this device's time zone). */
 function localInputValue(date) {
@@ -151,7 +151,7 @@ async function watchLicence() {
 /**
  * Licence status line in the footer, on every page: "Licensed to Demo Bank · valid until 31 Oct 2027".
  * In: the GET /license reply (or null when it couldn't be read). Out: nothing (draws the line).
- * Why: the PRD's licence demo starts with "show who it is licensed to and when it expires"; before
+ * Why: the licence demo starts with "show who it is licensed to and when it expires"; before
  * this the page only said anything once the licence had already ended.
  * With under an hour left (the 5-minute demo licence) it becomes a live countdown, "ends in 4:32".
  */
@@ -520,7 +520,7 @@ function whyPanel(r) {
 
 /**
  * The WhatsApp warning text for a lookup result ("Share on WhatsApp"), in the current language.
- * Privacy (docs/04): it shares only what's already on screen. A number with fewer than 3
+ * Privacy: it shares only what's already on screen. A number with fewer than 3
  * independent reporters stays masked (98XXXXX210) and the link then opens the plain Check page,
  * so the full number never travels in the message. Careful wording: "reported", never accusing words.
  * The warning names the reported scam type and gives THAT type's safety tip (e.g. "You never scan a
@@ -545,7 +545,7 @@ function shareMessage(r, idType, sub) {
 function resultCard(r, typed, idType) {
   const cls = { KNOWN_SCAM: "known", SUSPICIOUS: "susp", NO_REPORTS: "none", VERIFIED_BUSINESS: "verified" }[r.verdict];
   const headIcon = { known: "alert", susp: "alertCircle", none: "info", verified: "shieldCheck" }[cls];
-  // "Reported by 7 people" ([PRD §3] example). People = different people AFTER the trust rules.
+  // "Reported by 7 people". People = different people AFTER the trust rules.
   const people = r.distinct_reporters || 0;
   const reportedBy = t(people === 1 ? "v_by_one" : "v_by_many", { n: fmtNum(people) });
 
@@ -655,7 +655,7 @@ async function pageReport(params) {
   };
   const whenHours = { now: 0, today: 3, yesterday: 24 };
   const startType = TYPES.includes(params.type) ? params.type : (detectType(params.value) || "phone");
-  const openedAt = performance.now();   // rehearsal stopwatch: form opened -> report sent (PRD: < 60 s)
+  const openedAt = performance.now();   // rehearsal stopwatch: form opened -> report sent (target: < 60 s)
   const now = new Date();
 
   view().innerHTML = `
@@ -818,7 +818,7 @@ async function pageReport(params) {
     $("#rlocmsg").textContent = t("locating");
     navigator.geolocation.getCurrentPosition((pos) => {
       // Turn the position into the nearest AREA right here on the phone; the coordinates are
-      // never sent or stored ([PRD §5] rule 1).
+      // never sent or stored.
       const here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       const nearest = meta.areas.reduce((best, a) => (haversineKm(here, a) < haversineKm(here, best) ? a : best));
       setArea(nearest);
