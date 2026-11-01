@@ -121,7 +121,8 @@ def build(now: datetime | None = None, seed: int | None = None) -> list[dict]:
     w_upi = f"kyc.update{m.rng.randint(100, 999)}@ybl"
     w_link = f"https://hdfc-reward{m.rng.randint(10, 99)}.in/claim"
     w_farm = m.phone()
-    s.append({"title": "A1. NORMAL REPORTS ON THE WEBSITE (your phone, Report page)", "intro": [
+    s.append({"values": {"call": w_call, "hindi": w_hindi, "icon": w_icon, "farm": w_farm},
+              "title": "A1. NORMAL REPORTS ON THE WEBSITE (your phone, Report page)", "intro": [
         "WHERE: the website, Report page (bottom bar, yellow +). No login. Pick YOUR area in step 4,",
         "e.g. HSR Layout. Before you start, open the Map (Bengaluru, Last 7 days) and note your area's count.",
         "RATE LIMIT: one person may send at most 3 reports an hour (more -> 429). Each browser window is one",
@@ -410,9 +411,71 @@ def render(sections: list[dict], now: datetime) -> str:
     return "\n".join(out)
 
 
+def render_cheatsheet(sections: list[dict], now: datetime) -> str:
+    """The short reference used during the demo: 10 examples, where to run each, what to paste,
+    and what to point at. Built from the same sections the test replays, so every line is true."""
+    by = {sec["title"][:2]: sec for sec in sections}
+    v = by["A1"]["values"]
+    one = lambda st: json.dumps(st["body"], ensure_ascii=False)
+    bodies = lambda code, kind="report": [one(st) for st in by[code]["steps"] if st["kind"] == kind]
+    first_lookup = lambda code: next(st["value"] for st in by[code]["steps"] if st["kind"] == "lookup")
+    real = first_lookup("B1")
+    out = [
+        "SCAM MAP - DEMO CHEAT SHEET (10 examples, mostly fake reports)",
+        "=" * 70,
+        f"Made {now.strftime('%Y-%m-%d %H:%M')} IST. Re-make right before the demo:  & $P tools\make_demo_examples.py",
+        f"WEBSITE  {LIVE}   (phone, or F12 -> phone view)",
+        f"/docs    {LIVE}/docs   POST /reports -> Try it out -> paste ONE line -> Execute",
+        "/docs lets us act as MANY people: each body has its own reporter_id (person) and ip_prefix",
+        "(network), like the judges' test tool. The website always makes you ONE person on your real network.",
+        "So: send fakes in /docs, then CHECK the number on the website and point at the result.",
+        "Order tip: do 1 (real scam) and then 6 (report-bombing) back to back: fakes stopped, real scams kept.",
+        "",
+    ]
+
+    def ex(n, title, where, show, lines):
+        out.extend(["-" * 70, f"{n}. {title}", f"   Where: {where}", f"   Show:  {show}"] + lines + [""])
+
+    ex(1, "REAL SCAM - 3 different people, 3 ways of typing the number", "/docs, Check after each report",
+       f"Check {real}: hidden after 1 and 2 people -> Known scam, shown in full after 3", bodies("B1"))
+    ex(2, "FAKE: SPAMMER - same person, same number, 6 times in an hour", "/docs",
+       f"/docs replies 201 201 201 429 429 429; Check {first_lookup('B2')} -> Reported by 1 person, hidden",
+       bodies("B2"))
+    ex(3, "FAKE: SPAMMER ON A PHONE", "website",
+       "after 3 reports in an hour from one browser, the next says \"You've sent several reports in a short time\"",
+       [f"   Report {v['call']} four times from the same window (rate limit: 3 an hour per person)."])
+    ex(4, "FAKE: ONE WI-FI, MANY ACCOUNTS - 8 accounts, same ip_prefix", "/docs",
+       f"Check {first_lookup('B3')} -> Reported by 1 person (not 8), hidden; Map: no alert for Whitefield",
+       bodies("B3"))
+    ex(5, "FAKE: WI-FI FARM ON A PHONE", "website",
+       f"Check {v['farm']} -> Reported by 1 person (not 3)",
+       [f"   3 times: open a NEW private/incognito window on the SAME Wi-Fi, report {v['farm']}."])
+    ex(6, "FAKE: REPORT-BOMBING - 8 friends, 8 networks, copy-pasted notes, one hour", "/docs",
+       f"Check {first_lookup('B4')} -> NOT Known scam, still hidden; Map: no alert for Rajajinagar",
+       bodies("B4"))
+    ex(7, "FAKE: REPORTING A VERIFIED BUSINESS (Fresh Bakes)", "/docs",
+       "Check +91 80 4100 2233 -> still Verified business", bodies("B5"))
+    ex(8, "FAKE: JUNK - 12345, test, unknown pincode, date in the future", "/docs (and type 12345 on the website)",
+       "400 for the first four, nothing saved; the 5th (unknown scam type) is kept as \"other\" -> 201",
+       bodies("B6"))
+    ex(9, "NORMAL REPORT - in Hindi, and with icons only", "website, Report page",
+       "saved (green Thanks screen); Check -> Reported by 1 person; Map: your area's count +1",
+       [f"   Hindi: tap हिंदी, फ़ोन कॉल -> अभी-अभी -> {v['hindi']} -> area -> submit",
+        f"   Icons: copy {v['icon']}, then phone tile -> flash -> Paste -> location -> green button"])
+    dispute = next(st for st in by["C3"]["steps"] if st["kind"] == "challenge")
+    ex(10, "DISPUTE - \"that is our real number\" (number from example 1)", "website 'Dispute a report' (or /docs POST /challenges)",
+       f"Check {real} -> Under review, hidden again, no longer Known scam",
+       [f"   Website: Dispute a report -> Phone -> {real} -> Sharma Sweets -> owner@example.com -> submit",
+        "   /docs POST /challenges: " + one(dispute)])
+    out += ["-" * 70, "FINALE: the full-size attacks (22 accounts, 40 friends, spammer, junk) + real campaigns:",
+            "   & $P tools\\scenarios.py --base http://localhost:8000 --seed 7     -> 47/47 PASS table",
+            "LICENCE: make 5-min licence -> upload --live -> site locks by itself -> upload long.json --live", ""]
+    return "\n".join(out)
+
+
 def main() -> int:
     now = datetime.now(IST).replace(microsecond=0)
-    OUT.write_text(render(build(now), now), encoding="utf-8")
+    OUT.write_text(render_cheatsheet(build(now), now), encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)} (times relative to {now.strftime('%H:%M')} IST)")
     return 0
 
