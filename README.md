@@ -77,7 +77,8 @@ Use the website's **Check** page, or `GET /lookup` in `/docs`.
 | `HDFCBK` · `1930` | SMS sender · Phone | **Verified business** | The verified list from the brief |
 | `9123498765` | Phone | No reports | Never reported |
 
-On any result, open **"Why this result?"** to see which trust rules applied (counts only, never who reported).
+On any result, open **"Why this result?"** to see which trust rules applied (counts only, never who reported),
+or tap **🔊 Read aloud** to hear the result in English or Hindi (the phone's own voice; nothing is sent to us).
 
 **Number formats:** `+91 98765 43210`, `09876543210`, `98765-43210` and `919876543210` are the same number.
 UPI IDs ignore capitals. Links ignore `http`, `www.` and `?tracking`. `VM-HDFCBK` is the same sender as `HDFCBK`.
