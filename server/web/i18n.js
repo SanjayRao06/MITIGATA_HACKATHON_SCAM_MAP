@@ -9,7 +9,7 @@ const STRINGS = {
   en: {
     // navigation
     nav_check: "Check", nav_report: "Report", nav_map: "Map", nav_dashboard: "Dashboard",
-    nav_guide: "Safety guide", nav_how: "How it works", nav_dispute: "Dispute a report",
+    nav_guide: "Safety guide", nav_how: "How it works", nav_dispute: "File Dispute",
     tab_home: "Home", tab_check: "Check", tab_report: "Report", tab_map: "Map", tab_more: "More",
     // footer
     footer_lost: "Lost money? Call 1930", footer_lost_sub: "National cyber crime helpline, call within the first hour",
@@ -197,7 +197,7 @@ const STRINGS = {
 
   hi: {
     nav_check: "जांचें", nav_report: "रिपोर्ट करें", nav_map: "नक्शा", nav_dashboard: "डैशबोर्ड",
-    nav_guide: "सुरक्षा गाइड", nav_how: "यह कैसे काम करता है", nav_dispute: "रिपोर्ट पर आपत्ति",
+    nav_guide: "सुरक्षा गाइड", nav_how: "यह कैसे काम करता है", nav_dispute: "आपत्ति दर्ज करें",
     tab_home: "होम", tab_check: "जांचें", tab_report: "रिपोर्ट", tab_map: "नक्शा", tab_more: "और",
     footer_lost: "पैसे गए? 1930 पर कॉल करें", footer_lost_sub: "राष्ट्रीय साइबर क्राइम हेल्पलाइन, पहले घंटे में कॉल करें",
     call_1930: "1930 पर कॉल करें", footer_privacy: "हम कभी आपका नाम या फ़ोन नंबर नहीं मांगते।",

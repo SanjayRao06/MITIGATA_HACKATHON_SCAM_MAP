@@ -318,11 +318,11 @@ def build(now: datetime | None = None, seed: int | None = None) -> list[dict]:
     ]})
 
     s.append({"title": "C3. DISPUTE - \"that is our real number\" (bonus)", "intro": [
-        "WHERE: website, top bar 'Dispute a report' (or the link on a Check result), or /docs POST /challenges.",
+        "WHERE: website, top bar 'File Dispute' (or the link on a Check result), or /docs POST /challenges.",
         "It never deletes reports: the number shows \"Under review\", is hidden again and can't be Known scam",
         "until reviewed. The claimant's name and email are never shown or logged."],
         "steps": [
-        text(f"WEBSITE: Dispute a report -> Phone -> {real} -> name Sharma Sweets -> email owner@example.com ->",
+        text(f"WEBSITE: File Dispute -> Phone -> {real} -> name Sharma Sweets -> email owner@example.com ->",
              "         proof \"GST certificate and shop licence\" -> Submit -> \"Under review\". Or in /docs:"),
         challenge({"identifier_type": "phone", "identifier_value": "0" + real, "claimant_name": "Sharma Sweets",
                    "contact_email": "owner@example.com", "proof_note": "GST certificate and shop licence attached."},
